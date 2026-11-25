@@ -3,22 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Binggo — 开源本机 B 站抽奖助手（哔哩哔哩抽奖工具）：自动发现 UP 合集与转发动态中的活动，一键 / 三连参与，可选定时调度。Win / macOS 免费下载，数据只存本机。">
+  <meta name="description" content="Binggo — 开源本机 B 站抽奖助手（哔哩哔哩抽奖工具）：自动发现 UP 合集与转发动态中的活动，一键参与、自动顺序参与，可选定时调度。Windows / Ubuntu 免费使用，数据只存本机。">
   <meta name="keywords" content="B站抽奖助手,哔哩哔哩抽奖,抽奖助手,Binggo,bilibinggo,动态抽奖,转发抽奖,一键参与">
-  <meta name="binggo-contact-email" content="victerrrrr@163.com">
   <meta name="theme-color" content="#faf9f5">
-  <link rel="canonical" href="https://luovicter-collab.github.io/bilibinggo/">
+  <link rel="canonical" href="https://komerser.github.io/bilibinggo/">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="zh_CN">
   <meta property="og:site_name" content="Binggo">
   <meta property="og:title" content="Binggo · B 站抽奖助手">
-  <meta property="og:description" content="本机哔哩哔哩抽奖助手：自动发现活动，一键 / 三连参与，Cookie 与数据不出电脑。">
-  <meta property="og:url" content="https://luovicter-collab.github.io/bilibinggo/">
-  <meta property="og:image" content="https://luovicter-collab.github.io/bilibinggo/images/apple-touch-icon.png?v=8">
+  <meta property="og:description" content="本机哔哩哔哩抽奖助手：自动发现活动，一键参与或自动顺序参与，Cookie 与数据不出电脑。">
+  <meta property="og:url" content="https://komerser.github.io/bilibinggo/">
+  <meta property="og:image" content="https://komerser.github.io/bilibinggo/images/apple-touch-icon.png?v=8">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Binggo · B 站抽奖助手">
   <meta name="twitter:description" content="开源本机 B 站抽奖工具 — 自动发现活动，一键参与。">
-  <meta name="twitter:image" content="https://luovicter-collab.github.io/bilibinggo/images/apple-touch-icon.png?v=8">
+  <meta name="twitter:image" content="https://komerser.github.io/bilibinggo/images/apple-touch-icon.png?v=8">
   <title>Binggo · B 站抽奖助手</title>
   <script type="application/ld+json">
   {
@@ -27,11 +26,11 @@
     "name": "Binggo",
     "alternateName": ["B站抽奖助手", "哔哩哔哩抽奖助手", "bilibinggo"],
     "applicationCategory": "UtilitiesApplication",
-    "operatingSystem": "Windows, macOS",
+    "operatingSystem": "Windows, Ubuntu",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CNY" },
-    "url": "https://luovicter-collab.github.io/bilibinggo/",
-    "downloadUrl": "https://github.com/luovicter-collab/bilibinggo/releases/latest",
-    "description": "本机运行的哔哩哔哩抽奖助手：从 UP 合集与监控动态发现活动，网页控制台一键 / 三连参与。"
+    "url": "https://komerser.github.io/bilibinggo/",
+    "downloadUrl": "https://github.com/Komerser/bilibinggo/releases/latest",
+    "description": "本机运行的哔哩哔哩抽奖助手：从 UP 合集与监控动态发现活动，网页控制台一键参与，或按筛选自动顺序参与。"
   }
   </script>
   <link rel="icon" href="./favicon.ico" sizes="48x48">
@@ -40,7 +39,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Noto+Serif+SC:wght@300;400;500;600&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./landing.css?v=20260801l">
+  <link rel="stylesheet" href="./landing.css?v=20261125a">
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
@@ -69,10 +68,10 @@
 
         <div class="nav-actions">
           <div class="nav-aside">
-            <a class="nav-aside-link" href="https://github.com/luovicter-collab/bilibinggo" target="_blank" rel="noopener">
+            <a class="nav-aside-link" href="https://github.com/Komerser/bilibinggo" target="_blank" rel="noopener">
               <em>开源</em><span>GitHub</span>
             </a>
-            <a class="nav-aside-link is-cta" href="https://github.com/luovicter-collab/bilibinggo/releases/latest" target="_blank" rel="noopener">
+            <a class="nav-aside-link is-cta" href="https://github.com/Komerser/bilibinggo/releases/latest" target="_blank" rel="noopener">
               <em>获取</em><span>免费下载</span>
             </a>
           </div>
@@ -97,7 +96,7 @@
         <a href="#faq" data-nav data-label="问答"><em>05</em><span>问答</span></a>
         <a href="#notice" data-nav data-label="注意"><em>06</em><span>注意</span></a>
       </nav>
-      <a class="nav-cta is-wide" href="https://github.com/luovicter-collab/bilibinggo/releases/latest" target="_blank" rel="noopener">
+      <a class="nav-cta is-wide" href="https://github.com/Komerser/bilibinggo/releases/latest" target="_blank" rel="noopener">
         <span>免费下载安装包</span><i aria-hidden="true">↓</i>
       </a>
     </div>
@@ -115,13 +114,13 @@
       <div class="wrap wrap-wide hero-inner">
       <div class="hero-copy">
         <p class="hero-num-kicker" data-in>00 · 首页</p>
-        <p class="hero-kicker" data-in>本机 · 开源 · Win / Mac</p>
+        <p class="hero-kicker" data-in>本机 · 开源 · Windows / Ubuntu</p>
         <p class="hero-brand" data-in>Binggo</p>
         <h1 class="hero-title" data-in>不用一个个找，<br>也不用一个个点</h1>
         <i class="hero-rule" aria-hidden="true" data-in></i>
-        <p class="hero-lead" data-in>抽奖不用自己翻合集、翻动态去找，也不用一条条点参与。Binggo 会自动发现进行中的活动，一键参与或三连一次点完。挂着就行，真正省心。</p>
+        <p class="hero-lead" data-in>抽奖不用自己翻合集、翻动态去找，也不用一条条点参与。Binggo 会自动发现进行中的活动，一键参与，或按当前筛选自动顺序处理。挂着就行，真正省心。</p>
         <div class="hero-cta" data-in>
-          <a class="btn btn-fill btn-lg" data-magnet href="https://github.com/luovicter-collab/bilibinggo/releases/latest" target="_blank" rel="noopener">
+          <a class="btn btn-fill btn-lg" data-magnet href="https://github.com/Komerser/bilibinggo/releases/latest" target="_blank" rel="noopener">
             免费下载
           </a>
           <a class="btn btn-line btn-lg" data-magnet href="#tour">看真实界面</a>
@@ -141,9 +140,9 @@
             <div class="hero-frame" id="hero-frame" role="button" tabindex="0" aria-label="查看当前界面导览，可拖拽切换">
               <div class="hero-rail" id="hero-rail">
                 <figure class="hero-slide is-wide is-overview"><img src="./images/guide-overview.png?v=20260727y" alt="概览页" width="2552" height="1308" decoding="async" fetchpriority="high"></figure>
-                <figure class="hero-slide is-wide"><img src="./images/guide-sources.png?v=20260727y" alt="数据源" width="2552" height="1308" decoding="async"></figure>
-                <figure class="hero-slide is-wide"><img src="./images/guide-activities.png?v=20260727y" alt="活动页" width="2552" height="1308" decoding="async"></figure>
-                <figure class="hero-slide is-wide"><img src="./images/guide-participate.png?v=20260727y" alt="参加活动" width="2552" height="1308" decoding="async"></figure>
+                <figure class="hero-slide is-wide"><img src="./images/guide-sources.png?v=20260727y" alt="数据源" width="2552" height="1308" loading="lazy" decoding="async"></figure>
+                <figure class="hero-slide is-wide"><img src="./images/guide-activities.png?v=20260727y" alt="活动页" width="2552" height="1308" loading="lazy" decoding="async"></figure>
+                <figure class="hero-slide is-wide"><img src="./images/guide-participate.png?v=20260727y" alt="参加活动" width="2552" height="1308" loading="lazy" decoding="async"></figure>
               </div>
             </div>
         </div>
@@ -242,8 +241,8 @@
             </article>
             <article class="why-item" tabindex="0">
               <p class="why-mark" aria-hidden="true">II</p>
-              <h3>一键 / 三连</h3>
-              <p class="why-sum">互动、转发、预约都在同一张列表里点完，三连还能一次带走多条未参加，让 Binggo 把「一条条点」收成「一次点完」。</p>
+              <h3>一键 / 顺序参与</h3>
+              <p class="why-sum">互动、转发、预约都在同一张列表里点完；自动顺序参与会按当前筛选和排序跨页处理未参加活动，让 Binggo 把「一条条点」收成「一次点完」。</p>
             </article>
             <article class="why-item" tabindex="0">
               <p class="why-mark" aria-hidden="true">III</p>
@@ -311,7 +310,7 @@
                 <b>III</b>
                 <span>
                   <em>活动</em>
-                  <small>按类型与状态收窄列表后，单条参与或三连一次清掉最前面几条</small>
+                  <small>按类型与状态收窄列表后，单条参与，或自动顺序处理全部未参加活动</small>
                 </span>
                 <i class="tour-rail-meter" aria-hidden="true"></i>
                 <i class="tour-rail-tail" aria-hidden="true"></i>
@@ -320,7 +319,7 @@
                 <b>IV</b>
                 <span>
                   <em>参加活动</em>
-                  <small>三连进度、定时点击与任务日志同屏，跑到哪一步一眼清楚</small>
+                  <small>顺序参与进度、定时点击与任务日志同屏，跑到哪一步一眼清楚</small>
                 </span>
                 <i class="tour-rail-meter" aria-hidden="true"></i>
                 <i class="tour-rail-tail" aria-hidden="true"></i>
@@ -343,22 +342,22 @@
                 <div class="tour-flight" id="tour-flight">
               <figure class="tour-slide is-overview is-active" data-tour-slide="0">
                 <div class="tour-slide-inner">
-                  <img src="./images/tour-overview.png?v=20260730c" alt="概览页" width="2170" height="1310" decoding="async">
+                  <img src="./images/tour-overview.png?v=20260730c" alt="概览页" width="2170" height="1310" loading="lazy" decoding="async">
                 </div>
               </figure>
               <figure class="tour-slide" data-tour-slide="1">
                 <div class="tour-slide-inner">
-                  <img src="./images/tour-sources.png?v=20260730c" alt="数据源" width="2170" height="1310" decoding="async">
+                  <img src="./images/tour-sources.png?v=20260730c" alt="数据源" width="2170" height="1310" loading="lazy" decoding="async">
                 </div>
               </figure>
               <figure class="tour-slide" data-tour-slide="2">
                 <div class="tour-slide-inner">
-                  <img src="./images/tour-activities.png?v=20260730c" alt="活动列表" width="2170" height="1310" decoding="async">
+                  <img src="./images/tour-activities.png?v=20260730c" alt="活动列表" width="2170" height="1310" loading="lazy" decoding="async">
                 </div>
               </figure>
               <figure class="tour-slide" data-tour-slide="3">
                 <div class="tour-slide-inner">
-                  <img src="./images/tour-participate.png?v=20260730c" alt="参加活动" width="2170" height="1311" decoding="async">
+                  <img src="./images/tour-participate.png?v=20260730c" alt="参加活动" width="2170" height="1311" loading="lazy" decoding="async">
                 </div>
               </figure>
                 </div>
@@ -407,8 +406,8 @@
         <div class="start-main">
         <div class="start-article">
           <article class="start-chapter" id="start-download">
-            <h3>1 · 下载安装包</h3>
-            <p class="start-ch-intro"><a class="start-inline-cta" href="https://github.com/luovicter-collab/bilibinggo/releases/latest" target="_blank" rel="noopener">打开最新 Release</a>，在页面下方「Assets」里选和你系统一致的文件下载（和平时下软件一样）。</p>
+            <h3>1 · 下载安装包 / 部署包</h3>
+            <p class="start-ch-intro"><a class="start-inline-cta" href="https://github.com/Komerser/bilibinggo/releases/latest" target="_blank" rel="noopener">打开最新 Release</a>，在页面下方「Assets」里选和你系统一致的文件下载（和平时下软件一样）。</p>
             <div class="start-spec-wrap">
               <table class="start-spec">
                 <caption class="visually-hidden">各平台安装包</caption>
@@ -431,14 +430,14 @@
                     <td>解压后双击主程序</td>
                   </tr>
                   <tr>
-                    <th scope="row">macOS</th>
-                    <td><code class="start-code">Binggo-macOS-arm64.dmg</code></td>
-                    <td>拖到「应用程序」</td>
+                    <th scope="row">Ubuntu</th>
+                    <td><code class="start-code">Binggo-&lt;版本&gt;-ubuntu.tar.gz</code></td>
+                    <td>部署包，含安装说明与 SHA-256 校验文件</td>
                   </tr>
                   <tr>
-                    <th scope="row">macOS</th>
-                    <td><code class="start-code">Binggo-macOS-arm64.zip</code></td>
-                    <td>解压后启动</td>
+                    <th scope="row">源码</th>
+                    <td><code class="start-code">Binggo-&lt;版本&gt;-source.zip</code></td>
+                    <td>自行构建时使用</td>
                   </tr>
                 </tbody>
               </table>
@@ -447,11 +446,11 @@
 
           <article class="start-chapter" id="start-install">
             <h3>2 · 安装并打开</h3>
-            <p class="start-ch-intro">安装或解压后启动 Binggo，一般会<strong>自动打开浏览器</strong>进入控制台。控制台在本机占用端口 <strong>8181</strong>（地址 <code class="start-code">http://127.0.0.1:8181</code>，只监听本机，不会暴露到局域网）。若浏览器没自动打开，请手动在地址栏输入该地址后回车。</p>
+            <p class="start-ch-intro">安装或解压后启动 Binggo，一般会<strong>自动打开浏览器</strong>进入控制台。控制台在本机占用端口 <strong>8182</strong>（地址 <code class="start-code">http://127.0.0.1:8182</code>，只监听本机，不会暴露到局域网）。若浏览器没自动打开，请手动在地址栏输入该地址后回车。</p>
             <ol class="start-steps">
               <li><strong>Windows 安装版：</strong>双击 exe → 允许安装 → 从开始菜单或桌面打开 Binggo。</li>
               <li><strong>Windows 便携版：</strong>解压 zip → 进入文件夹 → 双击带 Binggo 字样的主程序。</li>
-              <li><strong>macOS：</strong>从 dmg 拖入「应用程序」后打开；若被拦截，<strong>右键图标 → 打开</strong>（仅首次）。</li>
+              <li><strong>Ubuntu：</strong>校验并解压部署包，按其中的说明运行 <code class="start-code">sudo bash deploy.sh install</code>（或 Docker 方式）。</li>
               <li><strong>SmartScreen 提示：</strong>选「更多信息」→「仍要运行」（未签名软件的常见提示）。</li>
             </ol>
           </article>
@@ -487,7 +486,7 @@
             <p class="start-band">活动</p>
             <ol class="start-steps">
               <li>左侧进「活动」，按类型/状态筛选或搜奖品名。</li>
-              <li>单条点「参与」，或筛「未参加」后点顶部<strong>三连参与</strong>（最多 3 条）。充电抽奖会自动跳过。</li>
+              <li>单条点「参与」，或筛「未参加」后点顶部<strong>开始顺序参与</strong>，按当前筛选和排序逐项处理。充电抽奖会自动跳过。</li>
             </ol>
             <p class="start-band">参与文案</p>
             <ol class="start-steps">
@@ -496,8 +495,8 @@
             <p class="start-band">定时调度</p>
             <ol class="start-steps">
               <li>点右下角<strong>定时点击</strong>面板，按说明<strong>启动调度</strong>（不用时可停止）。</li>
-              <li>调度只会自动点这四类操作：「一键更新活动链接」「更新监控用户动态」「刷新任务状态」「三连参与」。</li>
-              <li><strong>更新类</strong>在每天 <strong>0、3、6、9、12、15、18、21 点</strong>整点批次触发；<strong>三连参与</strong>在每小时 <strong>5、10、15…55 分</strong>（每 5 分钟）尝试触发。</li>
+              <li>调度只会自动点这四类操作：「一键更新活动链接」「更新监控用户动态」「刷新任务状态」「自动顺序参与」。</li>
+              <li><strong>更新类</strong>在每天 <strong>0、3、6、9、12、15、18、21 点</strong>整点批次触发；<strong>自动顺序参与</strong>在每小时 <strong>5、10、15…55 分</strong>（每 5 分钟）尝试触发。</li>
               <li>若到点时控制台里已有别的任务在跑（<strong>撞车</strong>），调度会<strong>自动停机</strong>，但<strong>不会取消</strong>正在执行的那次抽奖任务。</li>
             </ol>
             <p class="start-band">任务日志</p>
@@ -508,7 +507,7 @@
           </article>
 
           <footer class="start-more">
-            <p>更细的页面说明见 <a href="https://github.com/luovicter-collab/bilibinggo/blob/main/docs/console.md" target="_blank" rel="noopener">控制台使用指南（console.md）</a>。</p>
+            <p>更细的页面说明见 <a href="https://github.com/Komerser/bilibinggo/blob/main/docs/console.md" target="_blank" rel="noopener">控制台使用指南（console.md）</a>。</p>
           </footer>
         </div>
         </div>
@@ -537,21 +536,21 @@
               <a
                 class="blast-rail-link is-active"
                 data-magnet
-                href="https://github.com/luovicter-collab/bilibinggo/releases/latest"
+                href="https://github.com/Komerser/bilibinggo/releases/latest"
                 target="_blank"
                 rel="noopener"
               >
                 <b aria-hidden="true">I</b>
                 <span>
                   <em>立即下载</em>
-                  <small>Windows · macOS 安装包</small>
+                  <small>Windows 安装包 · Ubuntu 部署包</small>
                 </span>
                 <i class="blast-rail-tail" aria-hidden="true"></i>
               </a>
               <a
                 class="blast-rail-link"
                 data-magnet
-                href="https://github.com/luovicter-collab/bilibinggo"
+                href="https://github.com/Komerser/bilibinggo"
                 target="_blank"
                 rel="noopener"
               >
@@ -565,7 +564,7 @@
               <a
                 class="blast-rail-link"
                 data-magnet
-                href="https://github.com/luovicter-collab/bilibinggo/issues/new?title=%5B反馈%5D%20"
+                href="https://github.com/Komerser/bilibinggo/issues/new?title=%5B反馈%5D%20"
                 target="_blank"
                 rel="noopener"
               >
@@ -576,18 +575,20 @@
                 </span>
                 <i class="blast-rail-tail" aria-hidden="true"></i>
               </a>
-              <div
-                class="blast-rail-link blast-rail-link--static"
-                id="blast-contact"
-                tabindex="0"
+              <a
+                class="blast-rail-link"
+                data-magnet
+                href="https://github.com/luovicter-collab/bilibinggo"
+                target="_blank"
+                rel="noopener"
               >
                 <b aria-hidden="true">IV</b>
                 <span>
-                  <em>联系我</em>
-                  <small>victerrrrr@163.com</small>
+                  <em>上游项目</em>
+                  <small>原作者 victor 的原始仓库</small>
                 </span>
                 <i class="blast-rail-tail" aria-hidden="true"></i>
-              </div>
+              </a>
             </nav>
           </aside>
         </div>
@@ -615,7 +616,7 @@
                   <span class="faq-chevron" aria-hidden="true"></span>
                 </button>
                 <div class="faq-answer">
-                  <p>不需要。下载 Windows 或 macOS 安装包，按页面「上手」从第 1 章往下做即可。只有你自己改源码、跑开发环境时才需要 Python。</p>
+                  <p>不需要。下载 Windows 安装包，或按 Ubuntu 部署说明操作，再照页面「上手」从第 1 章往下做即可。只有你自己改源码、跑开发环境时才需要 Python。</p>
                 </div>
               </div>
               <div class="faq-item">
@@ -625,7 +626,7 @@
                   <span class="faq-chevron" aria-hidden="true"></span>
                 </button>
                 <div class="faq-answer" hidden>
-                  <p>Release 提供 Windows（安装包与便携 zip）和 macOS Apple Silicon（arm64）的 dmg / zip。Intel Mac 请查看仓库说明，或自行用源码运行。</p>
+                  <p>Release 提供 Windows x64（安装包与便携 zip）和 Ubuntu 部署包（tar.gz）。其他平台可从源码运行。</p>
                 </div>
               </div>
             </div>
@@ -651,7 +652,7 @@
                   <span class="faq-chevron" aria-hidden="true"></span>
                 </button>
                 <div class="faq-answer" hidden>
-                  <p>不会上传到项目方服务器。控制台只在本机监听（开发环境 127.0.0.1:8787，安装包一般为 8181），Cookie 与 <code>llm.env</code> 写在电脑本地数据目录。</p>
+                  <p>不会上传到项目方服务器。控制台只在本机监听（开发环境 127.0.0.1:8787，安装包与 Ubuntu 部署一般为 8182），Cookie 与 <code>llm.env</code> 写在电脑本地数据目录。</p>
                 </div>
               </div>
               <div class="faq-item">
@@ -723,7 +724,7 @@
                   <span class="faq-chevron" aria-hidden="true"></span>
                 </button>
                 <div class="faq-answer" hidden>
-                  <p>只会在设定时间触发控制台里已有的几类操作：一键更新活动链接、更新监控用户动态、刷新任务状态、三连参与。不会修改密码或隐私设置。</p>
+                  <p>只会在设定时间触发控制台里已有的几类操作：一键更新活动链接、更新监控用户动态、刷新任务状态、自动顺序参与。不会修改密码或隐私设置。</p>
                 </div>
               </div>
             </div>
@@ -759,9 +760,14 @@
       </a>
       <div class="foot-end">
         <p class="foot-lead">
-          欢迎提出反馈；若觉得做得不错，欢迎<a
+          本 fork 由 Komerser 维护，基于 victor 的<a
             class="foot-star-link"
             href="https://github.com/luovicter-collab/bilibinggo"
+            target="_blank"
+            rel="noopener"
+          >上游项目</a>。欢迎提出反馈；若觉得做得不错，欢迎<a
+            class="foot-star-link"
+            href="https://github.com/Komerser/bilibinggo"
             target="_blank"
             rel="noopener"
           >给项目点一颗星</a>。
@@ -770,6 +776,6 @@
     </div>
   </footer>
 
-  <script src="./landing.js?v=20260801l" defer></script>
+  <script src="./landing.js?v=20261125a" defer></script>
 </body>
 </html>

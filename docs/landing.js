@@ -14,7 +14,7 @@
     "账号与统计",
     "监控用户动态",
     "筛选与参与",
-    "三连与定时",
+    "顺序参与与定时",
   ];
 
   /* ---------- Hero carousel ---------- */
@@ -477,16 +477,16 @@
     {
       num: 'III',
       label: '活动',
-      caption: '筛选后单条或三连',
+      caption: '筛选后单条或顺序参与',
       title: '筛好再点一次清光',
-      desc: '按类型、状态与关键词收窄列表后，你可以单条参与，也可以用三连一次带走最前面几条尚未参加的活动',
+      desc: '按类型、状态与关键词收窄列表后，你可以单条参与，也可以用自动顺序参与处理全部尚未参加的活动',
     },
     {
       num: 'IV',
       label: '参加活动',
       caption: '进度、定时与日志同屏',
       title: '参加过程随时看得见',
-      desc: '三连并行进度、定时点击与任务日志落在同一屏，当前跑到哪一步、卡在哪一条，不用再猜有没有真的点下去',
+      desc: '顺序参与进度、定时点击与任务日志落在同一屏，当前跑到哪一步、卡在哪一条，不用再猜有没有真的点下去',
     },
   ];
 
@@ -1504,13 +1504,6 @@
   matchMedia("(min-width: 900px)").addEventListener?.("change", (e) => {
     if (e.matches) setOpen(false);
   });
-
-  const blastContact = document.getElementById("blast-contact");
-  const metaEmail = document.querySelector('meta[name="binggo-contact-email"]')?.getAttribute("content")?.trim();
-  if (blastContact && metaEmail) {
-    const emailEl = blastContact.querySelector("small");
-    if (emailEl) emailEl.textContent = metaEmail;
-  }
 
   const blastRail = document.getElementById("blast-rail");
   if (blastRail) {

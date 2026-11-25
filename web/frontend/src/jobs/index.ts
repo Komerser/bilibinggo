@@ -18,6 +18,24 @@ import { loadWatchUsers } from "../watch/index";
 import { notifyTaskQueueChanged, showTaskNotice } from "./task-logs";
 
 let qrcodeLastFocus = null;
+const MAX_JOB_LOG_CHARS = 200_000;
+let renderedJobLog = "";
+let renderedJobLogId;
+
+function renderJobLog(text, jobId) {
+  if (jobId !== renderedJobLogId) {
+    renderedJobLogId = jobId;
+    renderedJobLog = "";
+  }
+  const next = sanitizeUserText(text) || "";
+  if (!jobLog || next === renderedJobLog) return;
+  if (renderedJobLog && next.startsWith(renderedJobLog)) {
+    jobLog.append(document.createTextNode(next.slice(renderedJobLog.length)));
+  } else {
+    jobLog.textContent = next;
+  }
+  renderedJobLog = next;
+}
 
 export function isRefreshPipelineAction(action) {
   return action === "refresh_all" || action === "refresh_source";
@@ -1029,7 +1047,7 @@ export function updateProgressUI(job) {
 
 export function updateJobUI(job) {
   jobMessage.textContent = sanitizeUserText(job.message) || "暂无任务";
-  jobLog.textContent = sanitizeUserText(job.log) || "";
+  renderJobLog(job.log, job.id);
   if (document.getElementById("section-logs")?.classList.contains("active")) jobLog.scrollTop = jobLog.scrollHeight;
   if (job.state === "running" && jobResultBanner?.dataset.jobId !== String(job.id)) hideParticipationResult(true);
   setButtonsDisabled(job.state === "running");
@@ -1268,7 +1286,12 @@ export function mergeJobProgress(payload) {
 export function appendJobLogChunk(chunk) {
   const base = state.currentJob || { state: "running", log: "" };
   const current = String(base.log || "").trim();
-  const next = current ? `${current}\n${chunk}` : chunk;
+  let next = current ? `${current}\n${chunk}` : chunk;
+  if (next.length > MAX_JOB_LOG_CHARS) {
+    const cut = next.length - MAX_JOB_LOG_CHARS;
+    const lineEnd = next.indexOf("\n", cut);
+    next = lineEnd === -1 ? next.slice(cut) : next.slice(lineEnd + 1);
+  }
   state.currentJob = { ...base, log: next, state: base.state || "running" };
   updateJobUI(state.currentJob);
 }

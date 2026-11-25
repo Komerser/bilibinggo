@@ -171,9 +171,10 @@ class ControlService:
         if current.id is None:
             return None
         with self.store.transaction() as db:
-            found = db.execute("SELECT id FROM control_jobs WHERE owner='app' AND backend_id=?", (current.id,)).fetchall()
+            found = db.execute("SELECT id,payload FROM control_jobs WHERE owner='app' AND backend_id=?",
+                               (current.id,)).fetchall()
         for row in found:
-            if self.store.job_record(row[0])[2]["boot_id"] == BOOT_ID:
+            if json.loads(row[1]).get("boot_id") == BOOT_ID:
                 return self.job(row[0])
         value = self.store.new_job(current.action, BOOT_ID, metadata={"source": current.source})
         self.store.bind_job(value["job_id"], current.id)
@@ -547,7 +548,7 @@ def persist_runner_event(event, data):
     if service is None or data.get("id") is None:
         return
     with service.store.transaction() as db:
-        rows = db.execute("SELECT id,payload FROM control_jobs WHERE owner='app' AND backend_id=?", (data["id"],)).fetchall()
+        rows = db.execute("SELECT id FROM control_jobs WHERE owner='app' AND backend_id=? "
+                          "AND json_extract(payload,'$.boot_id')=?", (data["id"], BOOT_ID)).fetchall()
     for row in rows:
-        if json.loads(row[1])["boot_id"] == BOOT_ID:
-            service.store.event(row[0], {"kind": event, "data": redact_obj(data)})
+        service.store.event(row[0], {"kind": event, "data": redact_obj(data)})

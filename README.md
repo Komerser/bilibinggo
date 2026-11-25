@@ -44,7 +44,7 @@ Binggo 仅供个人学习和研究，是未经哔哩哔哩授权或认可的第�
 
 | 平台 | 6.0.3 下载 |
 | --- | --- |
-| Windows x64 | [安装包](https://github.com/Komerser/bilibinggo/releases/download/v6.0.3/Binggo-Setup-win64.exe) · [便携版](https://github.com/Komerser/bilibinggo/releases/download/v6.0.3/Binggo-Portable-win64.zip) |
+| Windows x64 | [安装包](https://github.com/Komerser/bilibinggo/releases/download/v6.0.3/Binggo-Setup-win64.exe) · [便携版](https://github.com/Komerser/bilibinggo/releases/download/v6.0.3/Binggo-Portable-win64.zip) · [SHA-256 校验](https://github.com/Komerser/bilibinggo/releases/download/v6.0.3/SHA256SUMS.txt) |
 | Ubuntu | [部署包](https://github.com/Komerser/bilibinggo/releases/download/v6.0.3/Binggo-6.0.3-ubuntu.tar.gz) · [SHA-256 校验文件](https://github.com/Komerser/bilibinggo/releases/download/v6.0.3/Binggo-6.0.3-ubuntu.tar.gz.sha256) |
 
 ### Windows x64

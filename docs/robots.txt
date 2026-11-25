@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://luovicter-collab.github.io/bilibinggo/sitemap.xml
+Sitemap: https://komerser.github.io/bilibinggo/sitemap.xml

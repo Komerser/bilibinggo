@@ -42,12 +42,14 @@ class ControlStore:
                     result TEXT, created_at TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS control_jobs(id INTEGER PRIMARY KEY AUTOINCREMENT,
                     owner TEXT NOT NULL, backend_id INTEGER, payload TEXT NOT NULL);
+                CREATE INDEX IF NOT EXISTS control_jobs_backend ON control_jobs(owner,backend_id);
                 CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT,
                     job_id INTEGER NOT NULL, payload TEXT NOT NULL);
                 CREATE INDEX IF NOT EXISTS control_events_job ON events(job_id,seq);
                 CREATE TABLE IF NOT EXISTS discovery_videos (
                     bvid TEXT PRIMARY KEY, first_seen TEXT NOT NULL, last_seen TEXT NOT NULL
                 );
+                CREATE INDEX IF NOT EXISTS discovery_videos_recent ON discovery_videos(last_seen DESC,bvid);
                 CREATE TABLE IF NOT EXISTS discovery_video_metadata (
                     bvid TEXT PRIMARY KEY, title TEXT NOT NULL, sightings INTEGER NOT NULL, legacy_history INTEGER NOT NULL
                 );
@@ -226,9 +228,14 @@ class ControlStore:
 
     def list_jobs(self, *, before=2147483647, limit=50, state=None):
         with self.transaction() as db:
-            rows = db.execute("SELECT payload FROM control_jobs WHERE id<? ORDER BY id DESC LIMIT ?", (before, 1000)).fetchall()
-        values = [json.loads(row[0]) for row in rows]
-        return [v for v in values if state is None or v["state"] == state][:limit]
+            if state is None:
+                rows = db.execute("SELECT payload FROM control_jobs WHERE id<? ORDER BY id DESC LIMIT ?",
+                                  (before, limit)).fetchall()
+            else:
+                rows = db.execute("SELECT payload FROM control_jobs "
+                                  "WHERE id<? AND json_extract(payload,'$.state')=? ORDER BY id DESC LIMIT ?",
+                                  (before, state, limit)).fetchall()
+        return [json.loads(row[0]) for row in rows]
 
     def event(self, job_id: int, value: dict):
         with self.transaction() as db:

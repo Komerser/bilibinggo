@@ -2395,11 +2395,6 @@ body.touch .hero-arrow {
 .blast-rail-link.is-active small {
   color: rgba(250, 249, 245, 0.62);
 }
-.blast-rail-link--static {
-  cursor: default;
-  text-decoration: none;
-}
-
 /* FAQ · Long Document (scoped) · cream panel · grouped accordion
  * Hallmark · pre-emit critique: P4 H5 E5 S5 R5 V4
  */
