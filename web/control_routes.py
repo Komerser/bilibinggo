@@ -45,6 +45,10 @@ def install_control(app):
                     valid = False
                 if not valid:
                     return JSONResponse({"detail": "Invalid Origin"}, status_code=403)
+            if request.method not in _SAFE_METHODS and not path.startswith(("/api/updates/", "/api/cluster/peer/")):
+                from src.update_state import maintenance
+                if maintenance.is_set():
+                    return JSONResponse({"detail": "版本更新中，请等待当前任务结束及服务重启"}, status_code=409)
         if path.startswith("/api/control/v2"):
             access = get_control_service().access()
             if not secrets.compare_digest(request.headers.get("authorization", ""), "Bearer " + access["token"]):

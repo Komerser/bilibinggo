@@ -43,6 +43,7 @@ jobs:
           name: binggo-windows-${{ github.sha }}
           path: |
             dist/Binggo-Portable-win64.zip
+            dist/Binggo-Portable-win64.zip.sha256
             dist/Binggo-Setup-win64.exe
 
       - name: Upload release assets
@@ -51,6 +52,7 @@ jobs:
         with:
           files: |
             dist/Binggo-Portable-win64.zip
+            dist/Binggo-Portable-win64.zip.sha256
             dist/Binggo-Setup-win64.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

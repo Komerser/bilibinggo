@@ -71,7 +71,7 @@ def install_cluster(app):
             try:
                 yield state
             finally:
-                service.stop()
+                application.state.cluster.stop()
 
     app.router.lifespan_context = lifespan
 

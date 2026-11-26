@@ -42,6 +42,10 @@ sudo bash deploy.sh install
 
 Ubuntu 22.04 可在 Docker Engine 和 Compose 就绪后运行 `sudo bash deploy.sh docker`。systemd 的数据目录为 `/var/lib/binggo`，Docker 使用部署目录下的 `user-data`。单人远程使用时可以通过 SSH 端口转发访问控制台。要让其他设备加入集群，请配置成员能够访问的 HTTPS 入口。 [主节点入口配置](docs/cluster.md#主服务器入口)
 
+### 一键版本更新
+
+从 6.1.2.01 起，Windows 发行包可在「概览 → 项目信息」选择「更新版本」。Ubuntu systemd 的同一位置提供「更新此服务器」。程序从正式 Releases 下载部署包，等待任务结束并备份，再切换版本。查看进度和结果请用「日志 → 本机更新日志」。已有 Ubuntu systemd 部署首次升级到带更新器的发行包时，先结束任务，再从新部署包的解压目录执行 `sudo bash deploy.sh upgrade`。 [版本更新说明](docs/local-version-update.md)
+
 ## 开始使用
 
 1. 在控制台侧栏扫码登录 B 站。需要模型核验或解析转发活动时，在「概览」配置 LLM 并完成连接测试。

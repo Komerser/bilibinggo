@@ -433,9 +433,27 @@
                   </div>
                   <div class="project-showcase-side-actions">
                     <button type="button" class="btn btn-secondary btn-pill btn-compact" id="check-updates">检查更新</button>
+                    <button type="button" class="btn btn-primary btn-pill btn-compact" id="apply-local-update">更新版本</button>
                     <a class="btn btn-ghost btn-pill btn-compact" id="open-releases" href="https://github.com/Komerser/bilibinggo/releases" target="_blank" rel="noopener">Releases</a>
                   </div>
                   <p class="caption" id="runtime-health-hint" hidden></p>
+                  <p class="caption" id="local-update-support"></p>
+                  <div class="local-update-demo" id="local-update-demo" hidden>
+                    <span class="caption">演示模式 · 不修改程序和数据</span>
+                    <button type="button" class="btn btn-ghost btn-compact" id="preview-update">演示更新成功</button>
+                    <button type="button" class="btn btn-ghost btn-compact" id="preview-update-failure">演示失败恢复</button>
+                  </div>
+                  <div class="local-update-progress" id="local-update-progress" hidden aria-live="polite">
+                    <strong id="local-update-title">更新进度</strong>
+                    <p id="local-update-message"></p>
+                    <ol id="local-update-steps"></ol>
+                    <p class="caption" id="local-update-data"></p>
+                    <div class="local-update-actions">
+                      <button type="button" class="btn btn-secondary btn-compact" id="cancel-local-update" hidden>取消等待</button>
+                      <button type="button" class="btn btn-primary btn-compact" id="reload-after-update" hidden>刷新页面</button>
+                      <button type="button" class="btn btn-ghost btn-compact" id="open-update-log">查看本机日志</button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </article>
@@ -946,6 +964,11 @@
         </template>
 
         <section class="view-section" id="section-logs" data-title="任务日志" data-subtitle="查看执行顺序、任务进度和结果。">
+          <article class="panel local-update-history" id="local-update-history">
+            <div class="task-panel-heading"><h2>本机更新日志</h2><span class="caption">仅保存在本机，不同步到集群</span></div>
+            <p class="caption" id="local-update-log-empty">暂无更新记录</p>
+            <div id="local-update-log-list"></div>
+          </article>
           <div data-cluster-log="local"></div>
           <div class="task-layout">
             <div class="task-left">

@@ -163,6 +163,8 @@ install_discovery(app)
 install_task_queue(app)
 from web.cluster_routes import install_cluster
 install_cluster(app)
+from web.update_routes import install_updates
+install_updates(app)
 
 
 @app.get("/api/watch-users", tags=["stable"])

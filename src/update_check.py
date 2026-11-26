@@ -10,9 +10,10 @@ from typing import Any
 import httpx
 
 from src.log_redact import redact_text
+from src.release_channel import REPOSITORY
 from src.version_info import compare_versions, get_version, strip_v_prefix
 
-GITHUB_REPO = "Komerser/bilibinggo"
+GITHUB_REPO = REPOSITORY
 GITHUB_API_LATEST = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 GITHUB_RELEASES_PAGE = f"https://github.com/{GITHUB_REPO}/releases"
 TIMEOUT_SEC = 8.0
@@ -54,6 +55,8 @@ def _platform_hint(platform: str) -> str:
         return "请下载 Binggo-Setup-win64.exe 或 Binggo-Portable-win64.zip"
     if platform == "macos":
         return "请下载 Binggo-macOS-arm64.dmg（推荐，拖到应用程序）或 Binggo-macOS-arm64.zip"
+    if platform == "linux":
+        return "Ubuntu systemd 部署可使用「更新此服务器」，也可下载部署包手动升级"
     return "请到 GitHub Releases 下载对应平台安装包"
 
 
@@ -80,6 +83,10 @@ def _pick_download_url(assets: list[Any], platform: str) -> str | None:
             for name, url in names:
                 if key in name and name.endswith(".zip"):
                     return url
+    if platform == "linux":
+        for name, url in names:
+            if name.endswith("-ubuntu.tar.gz"):
+                return url
     return None
 
 

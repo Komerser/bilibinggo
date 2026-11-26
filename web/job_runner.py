@@ -192,6 +192,12 @@ class JobRunner:
         with self._lock:
             return self._status.state == "running"
 
+    def pause_admission_for_update(self) -> None:
+        from src.update_state import maintenance
+
+        with self._lock:
+            maintenance.set()
+
     def start(
         self,
         action: str,
@@ -214,7 +220,8 @@ class JobRunner:
         source_s = str(source or "ui")
 
         with self._lock:
-            if self._status.state == "running":
+            from src.update_state import maintenance
+            if self._status.state == "running" or maintenance.is_set():
                 return None
             previous = _copy_status(self._status)
             self._cancel_event = threading.Event()

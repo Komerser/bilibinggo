@@ -137,6 +137,18 @@ class ClusterService:
         self.stop_event.set()
         self.wake.set()
 
+    def drain_for_update(self):
+        with self.lock:
+            if self._job is not None:
+                self.wake.set()
+                return False
+            self.stop()
+        return self._thread is None or not self._thread.is_alive()
+
+    def update_busy(self):
+        with self.lock:
+            return self._job is not None
+
     def _remote(self, session, path, token, payload):
         headers = {"Authorization": "Bearer " + token}
         if path == "/join":
@@ -462,6 +474,7 @@ class ClusterService:
 
     def _sync(self, session, batch, pool, *, history=None, import_round=None, watch=None):
         from web.job_runner import runner
+        from src.update_state import maintenance
 
         node = session["node"]
         pending = self.store.read(f"report:{node}")
@@ -478,13 +491,13 @@ class ClusterService:
             participation_support and import_round
         ) else None
         local = runner.get_status()
-        local_work = "idle"
+        local_work = "busy" if maintenance.is_set() else "idle"
         if local.state == "running":
             local_work = ("participating" if local.action.startswith("participate")
                           else "watch" if local.action == "refresh_watch" else "busy")
         tracking = session["role"] == "host" or self.status_remote.get("watch_tracking")
         message = Exchange(node=node, after=self.store.read(cursor_key, 0), activities=batch,
-                           work=not self._job and local_work == "idle" and (two_stage or video_detection),
+                           work=not maintenance.is_set() and not self._job and local_work == "idle" and (two_stage or video_detection),
                            video_detection=video_detection if two_stage else None,
                            unknown_activity_time=True,
                            working=Lease(task_id=active.task_id, lease=active.lease) if active else None,

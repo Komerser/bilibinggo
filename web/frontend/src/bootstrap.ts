@@ -19,6 +19,7 @@ import { playOverviewEnter, setButtonLoading } from "./utils/motion";
 import { sanitizeUserText } from "./utils/text";
 import { bindDiagnosticsExport } from "./diagnostics/index";
 import { bindCheckUpdates, loadRuntimeInfo } from "./runtime/index";
+import { bindLocalUpdates } from "./runtime/local-update";
 import { bindWatchUsers, loadWatchUsers } from "./watch/index";
 import { bindDiscovery } from "./discovery/index";
 import { bindCluster } from "./cluster";
@@ -41,6 +42,7 @@ export async function init() {
   bindUsageOverview();
   bindDiagnosticsExport();
   bindCheckUpdates();
+  bindLocalUpdates();
   loadRuntimeInfo().catch(() => {});
   await syncProjectState();
   try {

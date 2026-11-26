@@ -1,0 +1,9 @@
+[Unit]
+Description=Watch for local Binggo update requests
+
+[Path]
+PathExists=/var/lib/binggo-updater/inbox/request.json
+Unit=binggo-updater.service
+
+[Install]
+WantedBy=multi-user.target

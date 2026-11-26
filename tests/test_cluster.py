@@ -80,6 +80,38 @@ def test_time_search_remembers_completed_coverage_and_stops_at_it_after_restart(
     assert store.read(key) == now - 60
 
 
+def test_update_maintenance_delivers_search_coverage_without_claiming_new_work(tmp_path, monkeypatch):
+    from threading import Event
+
+    from src import update_state
+
+    svc = ClusterService(tmp_path)
+    session = svc.store.start_host("主节点", "http://127.0.0.1:8182")
+    task = _exchange(svc.store, session, work=True).task
+    covered = {BVID: int(time.time()) - 60}
+    report_key = f"report:{session['node']}"
+    report = _report(task, references=[Reference(kind="video", key=BVID)],
+                     search_dates=covered, search_exhausted=True)
+    svc.store.write(report_key, report.model_dump())
+    exchange = Mock(wraps=svc.store.exchange)
+    monkeypatch.setattr(svc.store, "exchange", exchange)
+    monkeypatch.setattr("web.cluster_service.is_llm_ready", lambda: True)
+    stopping = Event()
+    stopping.set()
+    monkeypatch.setattr(update_state, "maintenance", stopping)
+    pool = Mock()
+    try:
+        feed = svc._sync(session, [], pool)
+        sent = exchange.call_args.args[0]
+        assert sent.report.search_dates == covered
+        assert sent.local_work == "busy"
+        assert not sent.work and feed.task is None
+        assert svc.store.read(report_key) is None
+        assert feed.status["counts"]["video"] == {"pending": 1}
+        pool.submit.assert_not_called()
+    finally:
+        svc.http.close()
+
 @pytest.mark.parametrize("interruption", ["target", "worker_without_dates", "video_failed"])
 def test_incomplete_cluster_search_keeps_previous_time_boundary(tmp_path, monkeypatch, interruption):
     from web import cluster_store
@@ -854,7 +886,7 @@ def test_watch_feed_stops_at_complete_per_creator_boundary(monkeypatch, reaches_
     assert fetch.call_count == (2 if reaches_boundary else 1)
 
 
-def test_watched_video_collection_skips_covered_detail_but_reads_new_id_at_boundary(monkeypatch):
+def test_watched_video_collection_skips_covered_detail_but_reads_new_id_at_boundary(monkeypatch, isolated_home):
     from contextlib import nullcontext
 
     from src.sources import ds1_xiaozhuli

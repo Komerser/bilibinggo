@@ -22,15 +22,38 @@ export function openAppConfirm({
   secondaryLabel = "",
   danger = false,
   onSecondary = null,
+  secretLabel = "",
+  onSecret = null as ((value: string) => void) | null,
 } = {}) {
   return new Promise((resolve) => {
     if (!appConfirmModal || !appConfirmCancel || !appConfirmYes) {
-      resolve(window.confirm(title || "确认继续？"));
+      resolve(secretLabel ? false : window.confirm(title || "确认继续？"));
       return;
+    }
+
+    const secretField = secretLabel ? document.createElement("label") : null;
+    const secretInput = secretField ? document.createElement("input") : null;
+    if (secretField && secretInput) {
+      secretField.className = "local-update-secret";
+      const text = document.createElement("span");
+      text.textContent = secretLabel;
+      secretInput.type = "password";
+      secretInput.autocomplete = "off";
+      secretInput.spellcheck = false;
+      secretInput.maxLength = 64;
+      secretField.append(text, secretInput);
+      appConfirmBullets?.after(secretField);
+      appConfirmYes.disabled = true;
+      secretInput.addEventListener("input", () => { appConfirmYes.disabled = secretInput.value.trim().length !== 64; });
     }
 
     const cleanup = () => {
       closeAppConfirm();
+      if (secretInput) {
+        secretInput.value = "";
+        secretField?.remove();
+        appConfirmYes.disabled = false;
+      }
       appConfirmCancel.removeEventListener("click", onCancel);
       appConfirmYes.removeEventListener("click", onConfirm);
       appConfirmBackdrop?.removeEventListener("click", onCancel);
@@ -44,6 +67,8 @@ export function openAppConfirm({
     };
 
     const onConfirm = () => {
+      if (secretInput && secretInput.value.trim().length !== 64) return;
+      if (secretInput) onSecret?.(secretInput.value.trim());
       cleanup();
       resolve(true);
     };
@@ -100,7 +125,7 @@ export function openAppConfirm({
       appConfirmSecondary.addEventListener("click", onSecondaryClick);
     }
     document.addEventListener("keydown", onKeyDown);
-    appConfirmCancel.focus();
+    (secretInput || appConfirmCancel).focus();
   });
 }
 
