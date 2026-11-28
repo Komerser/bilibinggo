@@ -18,7 +18,7 @@ from src.llm_settings import get_llm_config
 from src.lottery_discovery_broad import has_direct_video_entry, has_video_clue, search_author_lotteries
 from src.sources.common import opus_link
 from src.watch_feed import DEFAULT_MAX_PAGES, SPACE_FEED_URL, extract_feed_pub_ts, extract_forward_orig_id
-from web.cluster_protocol import Activity, CollectionCoverage, Reference, Report, Task
+from web.cluster_protocol import Activity, CollectionCoverage, PublisherCoverage, PublisherFinding, Reference, Report, Task
 
 MAX_VIDEO_REFERENCES = 16
 MAX_REFERENCE_DEPTH = 4
@@ -36,6 +36,7 @@ class WorkClient(d.DiscoveryClient):
         super().__init__(cache_path, budget=None)
         self.get_analysis = get_analysis
         self.put_analysis = put_analysis
+        self.publisher_findings = {}
 
     def extract(self, text, *, source="关联动态", followers=None, context=""):
         config = get_llm_config()
@@ -132,6 +133,14 @@ def _dynamic(client, key, now):
         public_notice = {k: v for k, v in notice.items() if k != "participated"}
         status = d.assess_candidate(row["evidence"], now=now, notice=public_notice, require_deadline=True)["status"]
     draw = row.get("draw_time")
+    uid, published = row.get("publisher_uid", ""), row.get("published_at")
+    if (status in {"open", "closed"} and not row.get("is_forward")
+            and (notice or (row.get("evidence") or {}).get("prize") and
+                 (row.get("evidence") or {}).get("rules") and (draw or row.get("deadline"))) and published
+            and _author_ref(uid) and hasattr(client, "publisher_findings")):
+        client.publisher_findings[key] = PublisherFinding(
+            activity=key, mid=uid, name=str(row.get("publisher") or uid)[:64], published=published,
+        )
     if status not in {"open", "closed"} or not draw:
         return linked, []
     activity = Activity(dynamic_id=key, source_url=opus_link(key),
@@ -177,7 +186,7 @@ def _detect_video(client, key, activities):
         raise retry
 
 
-def _check_watched_author(client, mid, activities, *, publish=None, covered_through=0):
+def _check_watched_author(client, mid, activities, *, publish=None, covered_through=0, publisher=False):
     now = int(time.time())
     lower = covered_through or now - WATCH_LOOKBACK
     offset = ""
@@ -213,6 +222,8 @@ def _check_watched_author(client, mid, activities, *, publish=None, covered_thro
             if published and not lower <= published <= now:
                 continue
             original = extract_forward_orig_id(item)
+            if publisher and (original or item.get("type") == "DYNAMIC_TYPE_FORWARD"):
+                continue
             if original and len(original) in (18, 19) and original.isascii() and original.isdecimal():
                 candidates.add(original)
             # The official lottery marker can be present even when the body is short.
@@ -239,12 +250,18 @@ def _check_watched_author(client, mid, activities, *, publish=None, covered_thro
         except (RetryCheck, httpx.HTTPError, BilibiliRequestError) as exc:
             retry = retry or exc
             continue
+        if publisher:
+            finding = client.publisher_findings.get(key)
+            if not finding or finding.mid != mid:
+                continue
         if publish and matches:
             publish(matches)
         else:
             activities.extend(matches)
     if retry is not None:
         raise retry
+    if publisher and dated and complete:
+        return PublisherCoverage(lower=lower, upper=now) if lower < now else None
     if dated and complete and newest is not None and newest >= lower:
         return newest
 
@@ -291,12 +308,17 @@ def _check_collection(client, mid, publish, covered=None):
 
 
 def execute(task: Task, cache_path: Path, get_analysis, put_analysis, *, two_stage=True, publish=None,
-            collection_mode=None, publish_references=None, watch_coverage=None) -> Report:
+            collection_mode=None, publish_references=None, watch_coverage=None, record_publishers=None) -> Report:
     result = {"task_id": task.task_id, "lease": task.lease, "outcome": "done"}
     client = WorkClient(cache_path, get_analysis, put_analysis)
     try:
         if task.kind == "search":
             result.update(_search(client, task))
+        elif task.kind == "publisher":
+            result["activities"] = activities = []
+            result["publisher_coverage"] = _check_watched_author(
+                client, task.key, activities, covered_through=(watch_coverage or {}).get("dynamics", 0), publisher=True,
+            )
         elif task.kind == "watch":
             result["activities"] = activities = []
             watch_coverage = watch_coverage or {}
@@ -340,4 +362,11 @@ def execute(task: Task, cache_path: Path, get_analysis, put_analysis, *, two_sta
         result["model_calls"] = client.llm_requests
         client.close()
         client.save()
+    if record_publishers and client.publisher_findings:
+        record_publishers(client.publisher_findings.values())
+    if task.kind == "publisher":
+        result["publisher_latest"] = max(
+            (item for item in client.publisher_findings.values() if item.mid == task.key),
+            key=lambda item: item.published, default=None,
+        )
     return Report(**result)

@@ -19,9 +19,9 @@ from web.control_service import get_control_service
 from web.user_messages import JOB_ACTION_LABELS
 
 logger = get_logger("task_queue")
-QUEUEABLE_ACTIONS = frozenset({"participate", "participate_triple", "participate_sequential", "refresh_all", "refresh_source", "refresh_watch", "refresh_status"})
+QUEUEABLE_ACTIONS = frozenset({"participate", "participate_triple", "participate_sequential", "refresh_all", "refresh_source", "refresh_watch", "refresh_status", "refresh_publishers"})
 _WAITING = frozenset({"queued", "starting", "running"})
-_RETRYABLE_ACTIONS = frozenset({"control_discover", "refresh_all", "refresh_source", "refresh_watch", "refresh_status"})
+_RETRYABLE_ACTIONS = frozenset({"control_discover", "refresh_all", "refresh_source", "refresh_watch", "refresh_status", "refresh_publishers"})
 
 
 def _can_retry(entry):
@@ -113,6 +113,12 @@ class TaskQueue:
                       and (not self.pause_reason or item.get("run_while_paused"))), None)
         if not entry:
             return
+        if entry["action"] == "refresh_publishers":
+            from web.app import app
+
+            cluster = getattr(app.state, "cluster", None)
+            if cluster and cluster.publisher_work_busy():
+                return
         entry.update(state="starting", message="正在提交任务")
         self._save()
         try:
@@ -165,6 +171,10 @@ class TaskQueue:
         entry = {"id": uuid.uuid4().hex, "created_at": utc_now(), "action": action, "label": task_label(action, params),
                  "params": params, "state": "queued", "message": "等待前一个任务结束", "job_id": None, "control_job_id": None}
         with self.lock:
+            if action == "refresh_publishers":
+                existing = next((item for item in self.entries if item["action"] == action and item["state"] in _WAITING), None)
+                if existing:
+                    return deepcopy(existing)
             if action == "participate":
                 for waiting in self.entries:
                     if (waiting["state"] in _WAITING and waiting["action"] == action
@@ -177,9 +187,16 @@ class TaskQueue:
                         return deepcopy(waiting)
             self.entries.append(entry)
             self._save()
+            if action == "refresh_publishers" and not self.pause_reason:
+                self.runner.pause_round_participation()
             self._advance()
             self._ensure_worker()
             return deepcopy(entry)
+
+    def publisher_waiting(self):
+        with self.lock:
+            return any(entry["action"] == "refresh_publishers" and entry["state"] in _WAITING
+                       and (not self.pause_reason or entry.get("run_while_paused")) for entry in self.entries)
 
     def snapshot(self):
         with self.lock:

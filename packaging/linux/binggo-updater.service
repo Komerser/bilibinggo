@@ -1,0 +1,13 @@
+[Unit]
+Description=Install a verified Binggo release for the local instance
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -I /usr/local/libexec/binggo-updater/updater.py
+UMask=0077
+TimeoutStartSec=26h
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/opt/binggo /var/lib

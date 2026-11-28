@@ -276,6 +276,7 @@ export const LOGIN_REQUIRED_ACTIONS = new Set([
   "refresh_all",
   "refresh_source",
   "refresh_watch",
+  "refresh_publishers",
   "refresh_status",
   "participate",
   "participate_sequential",
@@ -286,6 +287,7 @@ export const LLM_REQUIRED_ACTIONS = new Set([
   "refresh_all",
   "refresh_source",
   "refresh_watch",
+  "refresh_publishers",
   "participate",
   "participate_sequential",
 ]);

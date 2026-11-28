@@ -226,6 +226,23 @@ def discover(service, job_id, params, event, progress=None):
             value["raw"]["resume_expires_at"] = int(time.time()) + 7 * 86400
             value["review_context"] = review_context
             service.store.put("discovery", str(job_id), redact_obj(value))
+            from web.app import app
+            from web.cluster_protocol import PublisherFinding
+
+            cluster = getattr(app.state, "cluster", None)
+            if cluster:
+                findings = []
+                for item in rows:
+                    raw = item["raw"]
+                    mid = item.get("author_mid", "")
+                    dynamic = item.get("dynamic_id") or ""
+                    published = raw.get("published_at")
+                    if (item["eligible"] and not raw.get("is_forward") and re.fullmatch(r"[1-9][0-9]{0,19}", mid)
+                            and re.fullmatch(r"[0-9]{18,19}", dynamic) and published):
+                        findings.append(PublisherFinding(activity=dynamic, mid=mid,
+                            name=str(raw.get("publisher") or mid)[:64], published=published))
+                if findings:
+                    cluster.store.record_publishers(findings)
         finally:
             try:
                 client.save()

@@ -23,6 +23,7 @@ JOB_ACTION_LABELS: dict[str, str] = {
     "participate_triple": "三连参与",
     "participate_sequential": "自动顺序参与",
     "refresh_watch": "更新监控用户动态",
+    "refresh_publishers": "活动发布UP主 · 自动更新并搜索",
     "control_discover": "主动检索抽奖",
     "control_import": "导入检索结果",
     "control_discovery_filter": "筛选抽奖活动",

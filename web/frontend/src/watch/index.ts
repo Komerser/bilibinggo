@@ -179,6 +179,7 @@ export async function removeWatchUser(mid) {
 }
 
 export function bindWatchUsers() {
+  bindCollectionViews();
   watchAddForm?.addEventListener("submit", submitWatchUser);
   watchAddMidInput?.addEventListener("input", clearWatchMidError);
   watchUserGrid?.addEventListener("click", async (event) => {
@@ -209,6 +210,67 @@ export function bindWatchUsers() {
     if (!chip) return;
     closeWatchUserConfirm(chip);
     chip.classList.add("is-confirming");
+  });
+}
+
+function bindCollectionViews() {
+  const tabs = document.querySelectorAll("[data-collection-view]");
+  const publishers = document.getElementById("collection-publishers");
+  const organizers = document.getElementById("collection-organizers");
+  const status = document.getElementById("publisher-source-status");
+  const list = document.getElementById("publisher-source-list");
+  const previous = document.getElementById("publisher-source-prev");
+  const next = document.getElementById("publisher-source-next");
+  if (!publishers || !organizers || !status || !list || !previous || !next) return;
+  let page = 1;
+  let latestRequest = 0;
+  async function load(target) {
+    const request = ++latestRequest;
+    previous.disabled = next.disabled = true;
+    status.textContent = "正在读取发布者名单…";
+    try {
+      const result = await fetchJSON(`/api/cluster/publisher-sources?page=${target}`, {
+        headers: { "X-Binggo-Dashboard": "1" },
+      });
+      if (request !== latestRequest) return;
+      const last = Math.max(1, Math.ceil(result.total / result.page_size));
+      if (target > last) return load(last);
+      page = target;
+      previous.disabled = page <= 1;
+      next.disabled = page >= last;
+      list.replaceChildren(...result.items.map((item) => {
+        const row = document.createElement("li");
+        const link = document.createElement("a");
+        link.href = `https://space.bilibili.com/${encodeURIComponent(item.mid)}/dynamic`;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = item.name;
+        row.append(link, ` · 最近发布 ${formatUnixTimestamp(item.last_activity)}`);
+        return row;
+      }));
+      status.textContent = result.total ? `${result.total} 位发布者 · 第 ${page}/${last} 页`
+        : "暂无达到入选条件的发布者。名单会在轮检和主动检索核验后更新。";
+    } catch (error) {
+      if (request !== latestRequest) return;
+      list.replaceChildren();
+      status.textContent = String(error.message || error);
+    }
+  }
+  tabs.forEach((button) => button.addEventListener("click", () => {
+    const view = button.dataset.collectionView;
+    organizers.hidden = view !== "organizers";
+    publishers.hidden = view !== "publishers";
+    tabs.forEach((tab) => {
+      const selected = tab === button;
+      tab.classList.toggle("active", selected);
+      tab.setAttribute("aria-pressed", String(selected));
+    });
+    if (!publishers.hidden) void load(page);
+  }));
+  previous.addEventListener("click", () => void load(page - 1));
+  next.addEventListener("click", () => void load(page + 1));
+  window.addEventListener("binggo:publishers-refresh", () => {
+    if (!publishers.hidden) void load(page);
   });
 }
 

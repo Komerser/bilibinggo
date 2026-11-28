@@ -6,7 +6,7 @@ import { showToast } from "../shell/toast";
 import { setButtonLoading } from "../utils/motion";
 import { sanitizeUserText } from "../utils/text";
 
-const RELEASES_URL = "https://github.com/Komerser/bilibinggo/releases";
+const RELEASES_URL = "https://github.com/Aggressiveless/bilibinggo/releases";
 
 export async function loadRuntimeInfo() {
   const versionEl = document.getElementById("runtime-version");
@@ -48,24 +48,13 @@ export async function loadRuntimeInfo() {
   }
 }
 
-export function bindCheckUpdates() {
-  const button = document.getElementById("check-updates");
-  if (!button || button.dataset.bound === "1") {
-    return;
-  }
-  button.dataset.bound = "1";
-  button.addEventListener("click", () => {
-    checkForUpdates(button).catch(() => {});
-  });
-}
-
 function openUpdateUrl(data) {
   const downloadUrl = String(data?.download_url || "").trim();
   const releaseUrl = String(data?.release_url || RELEASES_URL).trim() || RELEASES_URL;
   window.open(downloadUrl || releaseUrl, "_blank", "noopener");
 }
 
-async function checkForUpdates(button) {
+export async function checkForUpdates(button) {
   setButtonLoading(button, true, { label: "检查中…" });
   try {
     const data = await fetchJSON("/api/updates/check", {

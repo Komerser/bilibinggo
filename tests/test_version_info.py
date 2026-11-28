@@ -32,3 +32,9 @@ def test_compare_versions() -> None:
     assert compare_versions("4.0.2", "v4.0.2") == 0
     assert compare_versions("bad", "also-bad") is None
     assert compare_versions("same-tag", "same-tag") == 0
+    assert compare_versions("6.1.1", "v6.1.1.01") == -1
+    assert compare_versions("6.1.1.01", "6.1.1.1") == 0
+    assert compare_versions("6.1.1.09", "6.1.1.10") == -1
+    assert compare_versions("6.1.1.10", "6.1.2") == -1
+    assert compare_versions("6.1.1.01", "6.1.2.01") == -1
+    assert compare_versions("6.1.2", "v6.1.2.01") == -1

@@ -14,6 +14,7 @@ from pathlib import Path
 
 from src.discovery_coverage import ordered_page_times
 from web.activity_service import collection_source_for_mid
+from web import publisher_sources
 from web.cluster_protocol import (Activity, Analysis, Change, DispatchSettings, Exchange, Feed, KEYWORDS, Lease,
                                   PAGE_SIZE, Reference, Register, RenameNode, Report, TARGET, Task, WATCH_LINK_DEPTH, WatchAssignment,
                                   WatchBatch, WatchFindings, WorkAssignments)
@@ -33,7 +34,8 @@ TRACKED_USERS_PER_PAGE = 12
 WATCH_VERIFIED_TTL = 7 * 86400
 WATCH_FAILED_TTL = 6 * 3600
 JOB_LABEL = {"search": "检索", "video": "视频检查", "watch_ref": "合集线索核验", "dynamic": "动态核验",
-             "article": "专栏检查", "short": "短链展开", "author": "发布者检查", "watch": "追踪 UP 主"}
+             "article": "专栏检查", "short": "短链展开", "author": "发布者检查", "watch": "追踪 UP 主",
+             "publisher": "活动发布UP主检查"}
 RETRY_LABEL = {"platform": "平台内容暂不可读", "model": "模型未返回有效结果",
                "network": "网络请求失败", "analysis_busy": "其它节点正在分析同一内容",
                "worker": "工作节点处理失败", "source_response": "B 站内容接口未返回可用数据",
@@ -132,12 +134,15 @@ class ClusterStore:
                     PRIMARY KEY(round,job,kind,key)
                 );
             """)
+            publisher_sources.install(db)
             db.execute("BEGIN IMMEDIATE")
             node_columns = {row["name"] for row in db.execute("PRAGMA table_info(nodes)")}
             if "search_ready" not in node_columns:
                 db.execute("ALTER TABLE nodes ADD COLUMN search_ready INTEGER NOT NULL DEFAULT 0")
             if "watch_batch" not in node_columns:
                 db.execute("ALTER TABLE nodes ADD COLUMN watch_batch INTEGER NOT NULL DEFAULT 0")
+            if "publisher_capable" not in node_columns:
+                db.execute("ALTER TABLE nodes ADD COLUMN publisher_capable INTEGER NOT NULL DEFAULT 0")
             self._migrate_round(db)
             if (self.get(db, "session") or {}).get("role") == "host" and self.get(db, "collection_paused") is None:
                 self.put(db, "collection_paused", self.get(db, "paused", False))
@@ -182,6 +187,26 @@ class ClusterStore:
     def write(self, key, value):
         with self.tx() as db:
             self.put(db, key, value)
+
+    def record_publishers(self, findings):
+        with self.tx() as db:
+            publisher_sources.record(db, findings, int(time.time()))
+
+    def publisher_listing(self, page, *, node=None, token=""):
+        with self.tx(write=False) as db:
+            db.execute("BEGIN")
+            if node is not None:
+                self._authenticate(db, node, token)
+            count = db.execute("SELECT count(*) FROM publisher_sources WHERE removed=0").fetchone()[0]
+            rows = db.execute("""SELECT mid,name,last_activity,checked FROM publisher_sources WHERE removed=0
+                ORDER BY last_activity DESC,mid LIMIT ? OFFSET ?""", (PAGE_SIZE, (page - 1) * PAGE_SIZE))
+            return {"items": [dict(row) for row in rows], "total": count, "page": page, "page_size": PAGE_SIZE}
+
+    def complete_publisher(self, db, mid, coverage, now, node=None):
+        removed = publisher_sources.complete(db, mid, coverage.lower, coverage.upper, now)
+        if removed:
+            self._event(db, now, f"活动发布UP主 {mid} 已从名单移除：完整检查覆盖 60 天未发布抽奖活动", node=node)
+        return removed
 
     def _migrate_round(self, db):
         session = self.get(db, "session") or {}
@@ -578,7 +603,7 @@ class ClusterStore:
         with self.tx() as db:
             self._authenticate(db, body.node, token)
             job = db.execute("""SELECT * FROM jobs WHERE id=? AND node=? AND lease=?
-                                AND state='leased' AND until>? AND kind='watch'""",
+                                AND state='leased' AND until>? AND kind IN ('watch','publisher')""",
                              (body.task_id, body.node, body.lease, now)).fetchone()
             if not job:
                 raise ClusterError("追踪任务已交回")
@@ -604,7 +629,7 @@ class ClusterStore:
                                 (params["watch_id"],)).fetchone()
             if parent:
                 self._publish_findings(db, parent, node, report.activities, now)
-        activities = {item.dynamic_id: item for item in report.activities} if kind in {"video", "watch"} else {}
+        activities = {item.dynamic_id: item for item in report.activities} if kind in {"video", "watch", "publisher"} else {}
         self._publish_findings(db, job, node, activities.values(), now)
         if report.outcome == "cooldown":
             until = max(now + report.cooldown, self.get(db, "cooldown_until", 0))
@@ -627,6 +652,16 @@ class ClusterStore:
                 self._queue_watch_refs(db, parent, report.references, params["depth"] + 1)
             db.execute("UPDATE jobs SET state='done',node=NULL,lease=NULL,until=0 WHERE id=?", (job["id"],))
             db.execute("UPDATE nodes SET completed=completed+1 WHERE id=?", (node,))
+            return
+        if kind == "publisher":
+            if report.publisher_latest and report.publisher_latest.mid == job["key"]:
+                publisher_sources.record(db, [report.publisher_latest], now)
+            if report.publisher_coverage:
+                self.complete_publisher(db, job["key"], report.publisher_coverage, now, node)
+            db.execute("UPDATE jobs SET state='done',node=NULL,lease=NULL,until=0 WHERE id=?", (job["id"],))
+            db.execute("UPDATE nodes SET completed=completed+1 WHERE id=?", (node,))
+            message = "检查完成" if report.publisher_coverage else "检查范围不完整，保留名单，等待下轮"
+            self._event(db, now, f"{self._job_label(job)}：{message}", node=node)
             return
         if kind == "watch":
             params = json.loads(job["params"])
@@ -977,6 +1012,11 @@ class ClusterStore:
         job = None
         if watch_ready and video_detection:
             job, modern = self._watch_job(db, node, now)
+            batch = self.get(db, "watch_batch") or {}
+            if (job is None and (batch.get("nodes") is None or node in batch["nodes"])
+                    and db.execute("SELECT publisher_capable FROM nodes WHERE id=?", (node,)).fetchone()[0]):
+                job = db.execute("""SELECT * FROM jobs WHERE round=0 AND kind='publisher'
+                    AND state='pending' AND due<=? ORDER BY id LIMIT 1""", (now,)).fetchone()
         if job is None and kind and not collection_paused and (kind != "video" or video_detection):
             pool = assignments["collection_nodes"] if assignments is not None else self._effective_pool(
                 db, dispatch.get(f"{kind}_nodes"), dispatch.get("fallback"), now, video=kind == "video")
@@ -1086,6 +1126,24 @@ class ClusterStore:
         batch = self.get(db, "watch_batch")
         if not batch or self._has_work(db, 0, "watch"):
             return
+        if self.get(db, "publisher_batch") != batch["id"]:
+            self.put(db, "publisher_batch", batch["id"])
+            candidates = db.execute("SELECT id FROM nodes WHERE publisher_capable=1 AND work=2 AND seen>?",
+                                    (now - ONLINE_SECONDS,))
+            if any(batch["nodes"] is None or row["id"] in batch["nodes"] for row in candidates):
+                sources = publisher_sources.active(db, due=now)
+                db.executemany("INSERT INTO jobs(round,kind,key,params) VALUES(0,'publisher',?,?)",
+                               ((source["mid"], _dump({"batch": batch["id"]})) for source in sources))
+                if sources:
+                    self.put(db, "publisher_batch_started", now)
+                    self._event(db, now, f"活动整理UP主与监控检查结束，开始检查 {len(sources)} 位活动发布UP主")
+        if self._has_work(db, 0, "publisher"):
+            if now - self.get(db, "publisher_batch_started", now) >= 3600:
+                skipped = db.execute("UPDATE jobs SET state='skipped' WHERE round=0 AND kind='publisher' AND state='pending'")
+                if skipped.rowcount:
+                    self._event(db, now, f"{skipped.rowcount} 项发布者检查未在本批开始，将在后续轮次重试", level="warning")
+            if self._has_work(db, 0, "publisher"):
+                return
         if self.get(db, "watch_finished") != batch["id"]:
             self.put(db, "watch_finished", batch["id"])
             self._event(db, now, "本轮追踪结束")
@@ -1094,7 +1152,8 @@ class ClusterStore:
                 self.put(db, "watch_next", max(now, batch.get("started", now) + WATCH_ROUND_INTERVAL))
         if not self.get(db, "watch_repeating", False) or self.get(db, "watch_next", 0) > now:
             return
-        if batch["nodes"] == [] or not db.execute("SELECT 1 FROM watch_sources LIMIT 1").fetchone():
+        if batch["nodes"] == [] or not db.execute("""SELECT 1 FROM watch_sources UNION ALL
+            SELECT 1 FROM publisher_sources WHERE removed=0 LIMIT 1""").fetchone():
             return
         self._assign_watch_batch(db, batch["nodes"], strict=bool(batch.get("strict")), start_only=True)
         self.put(db, "watch_next", 0)
@@ -1105,6 +1164,8 @@ class ClusterStore:
         self._require_dispatch_nodes(db, nodes or [])
         current = self.get(db, "watch_batch") or {}
         now = int(time.time())
+        if self._has_work(db, 0, "publisher"):
+            return
         if db.execute("""SELECT 1 FROM jobs WHERE kind='watch' AND state IN ('pending','leased','checking')
                          AND json_extract(params,'$.batch')=?""", (current.get("id"),)).fetchone():
             if not start_only:
@@ -1114,7 +1175,7 @@ class ClusterStore:
         if self._has_work(db, 0, "watch"):
             raise ClusterError("请等待已指派的单项追踪检查结束")
         mids = [row[0] for row in db.execute("SELECT DISTINCT mid FROM watch_sources ORDER BY mid")]
-        if not mids:
+        if not mids and not db.execute("SELECT 1 FROM publisher_sources WHERE removed=0 LIMIT 1").fetchone():
             raise ClusterError("集群尚无可追踪的 UP 主")
         batch = uuid.uuid4().hex
         unresolved = db.execute("""SELECT owner.key AS mid,
@@ -1125,7 +1186,7 @@ class ClusterStore:
             WHERE ref.round=0 AND ref.kind='watch_ref' AND ref.state='failed'""").fetchall()
         db.execute("DELETE FROM watch_ref_results WHERE expires<=?", (now,))
         db.execute("DELETE FROM sightings WHERE round=0")
-        db.execute("DELETE FROM jobs WHERE round=0 AND kind IN ('watch','watch_ref')")
+        db.execute("DELETE FROM jobs WHERE round=0 AND kind IN ('watch','watch_ref','publisher')")
         db.executemany("INSERT INTO jobs(round,kind,key,params) VALUES(0,'watch',?,?)",
                        ((mid, _dump({"batch": batch})) for mid in mids))
         parents = {row["key"]: row for row in db.execute("SELECT * FROM jobs WHERE round=0 AND kind='watch'")}
@@ -1164,6 +1225,10 @@ class ClusterStore:
                        (body.node, body.participation_pending, body.participation_enabled))
             if body.watch_list is not None:
                 self._sync_watch_list(db, body.node, body.watch_list)
+            db.execute("UPDATE nodes SET publisher_capable=? WHERE id=?",
+                       (body.publisher_findings is not None, body.node))
+            if body.publisher_findings:
+                publisher_sources.record(db, body.publisher_findings, now)
             sequence = self.get(db, "sequence", 0)
             for item in body.activities:
                 if body.unknown_activity_time or not item.closed:
@@ -1200,6 +1265,10 @@ class ClusterStore:
                     status["watch_collection_mode"] = mode
                 if coverage := self.get(db, f"watch_coverage:{task.key}"):
                     status["watch_coverage"] = coverage
+            if task and task.kind == "publisher":
+                row = db.execute("SELECT checked FROM publisher_sources WHERE mid=?", (task.key,)).fetchone()
+                status["watch_coverage"] = {"dynamics": row["checked"] if row else 0}
+            status["publisher_sources_supported"] = True
             return Feed(task=task, changes=changes, status=status)
 
     @staticmethod
@@ -1337,7 +1406,7 @@ class ClusterStore:
         if batch:
             batch = {**batch, "counts": dict(db.execute("""SELECT
                 CASE WHEN state='checking' THEN 'leased' ELSE state END AS display_state,count(*)
-                FROM jobs WHERE round=0 AND kind='watch' AND json_extract(params,'$.batch')=?
+                FROM jobs WHERE round=0 AND kind IN ('watch','publisher') AND json_extract(params,'$.batch')=?
                 GROUP BY display_state""", (batch["id"],)))}
             batch["references"] = dict(db.execute("""SELECT state,count(*) FROM jobs
                 WHERE round=0 AND kind='watch_ref' GROUP BY state"""))

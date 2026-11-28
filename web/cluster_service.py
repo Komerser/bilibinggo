@@ -27,6 +27,8 @@ from web.cluster_protocol import (Activity, Analysis, DetectionPageRequest, Exch
                                   LINK_PATTERNS, MAX_LOTTERY_TIME, PAGE_SIZE, PEER_PATH, POLL_SECONDS, Register, Report,
                                   RenameNode, VideoHistory, WATCH_PAGE_SIZE, WatchFindings, WatchList, WatchUser,
                                   ParticipationResult, normalize_address)
+from web.cluster_protocol import Change, PublisherFinding, Task
+from web import publisher_sources
 from web.cluster_store import ClusterError, ClusterStore
 from web.cluster_work import RetryCheck, execute
 
@@ -128,6 +130,7 @@ class ClusterService:
         self._thread = None
         self._job = None
         self._task = None
+        self._exchange_in_flight = False
 
     def start(self):
         self._thread = threading.Thread(target=self._run, name="binggo-cluster", daemon=True)
@@ -136,6 +139,18 @@ class ClusterService:
     def stop(self):
         self.stop_event.set()
         self.wake.set()
+
+    def drain_for_update(self):
+        with self.lock:
+            if self._job is not None:
+                self.wake.set()
+                return False
+            self.stop()
+        return self._thread is None or not self._thread.is_alive()
+
+    def update_busy(self):
+        with self.lock:
+            return self._job is not None
 
     def _remote(self, session, path, token, payload):
         headers = {"Authorization": "Bearer " + token}
@@ -259,10 +274,30 @@ class ClusterService:
             if job.state == "running":
                 return "running", None
             result = job.result or {}
+            if result.get("round_paused"):
+                from web.task_queue import get_task_queue
+
+                if get_task_queue().publisher_waiting() or runner.is_running():
+                    return "running", None
+                uid = self._participation_uid(session)
+                if not uid or progress.get("uid") != uid:
+                    return "disabled", None
+                handled = list(dict.fromkeys([*progress.get("handled", []), *result.get("handled", [])]))
+                with self.lock:
+                    if self.store.read("session") != session:
+                        return "disabled", None
+                    self.store.write(key, {"round": round_id, "job": None})
+                    resumed = runner.try_start("participate_sequential",
+                        {"from_auto": True, "_cluster_account": uid, "_round_handled": handled}, source="auto")
+                    self.store.write(key, {"round": round_id, "job": resumed, "uid": uid, "handled": handled,
+                                           "joined": progress.get("joined", 0) + result.get("joined", 0),
+                                           "skipped": progress.get("skipped", 0) + result.get("skipped", 0)}
+                                     if resumed is not None else progress)
+                return "running", None
             outcome = "done" if job.state == "success" and not result.get("failed") else "failed"
             summary = ParticipationResult(
-                joined=result.get("joined", 0), failed=result.get("failed", int(outcome == "failed")),
-                skipped=len([item for item in result.get("items", []) if item.get("status") == "skipped"]),
+                joined=progress.get("joined", 0) + result.get("joined", 0), failed=result.get("failed", int(outcome == "failed")),
+                skipped=progress.get("skipped", 0) + len([item for item in result.get("items", []) if item.get("status") == "skipped"]),
                 remaining=result.get("remaining", 0),
             )
             return outcome, summary
@@ -271,9 +306,11 @@ class ClusterService:
             return "disabled", None
         granted = (self.status_remote.get("participation_turn") or {}).get("granted") or (
             self.status_remote.get("round_import") or {}).get("participating")
+        from web.task_queue import get_task_queue
+
         if (not granted or self.status_remote.get("paused") or self._job
                 or not self.last_sync or time.time() - self.last_sync > 20
-                or runner.is_running()):
+                or runner.is_running() or get_task_queue().publisher_waiting()):
             return "ready", None
         if not is_llm_ready():
             return "failed", None
@@ -283,7 +320,7 @@ class ClusterService:
             self.store.write(key, {"round": round_id, "job": None})
             job = runner.try_start("participate_sequential", {"from_auto": True, "_cluster_account": uid},
                                    source="auto")
-            self.store.write(key, {"round": round_id, "job": job} if job is not None else progress)
+            self.store.write(key, {"round": round_id, "job": job, "uid": uid} if job is not None else progress)
         return ("running" if job is not None else "ready"), None
 
     def _supports_unknown_time(self, session):
@@ -349,8 +386,64 @@ class ClusterService:
         return execute(task, self.directory / "worker-cache.json",
                        lambda key: self._analysis(session, task, key),
                        lambda key, result: self._analysis(session, task, key, result),
-                       two_stage=two_stage, publish=publish if watch_batch and task.kind == "watch" else None,
-                       collection_mode=collection_mode, publish_references=publish_references, watch_coverage=watch_coverage)
+                       two_stage=two_stage,
+                       publish=publish if task.kind == "publisher" or (watch_batch and task.kind == "watch") else None,
+                       collection_mode=collection_mode, publish_references=publish_references, watch_coverage=watch_coverage,
+                       record_publishers=self.store.record_publishers)
+
+    def publisher_listing(self, page):
+        session = self.store.read("session") or {}
+        if session.get("role") == "member" and self.status_remote.get("publisher_sources_supported"):
+            return self._remote(session, "/publisher-sources", session["token"], {"page": page, "node": session["node"]})
+        return self.store.publisher_listing(page)
+
+    def publisher_work_busy(self):
+        return self._exchange_in_flight or self._job is not None
+
+    def refresh_publishers(self, progress, cancel_event):
+        from web.actions import _raise_if_cancelled
+
+        with self.store.tx(write=False) as db:
+            sources = {row["mid"]: row for row in publisher_sources.active(db)}
+        page = 1
+        while True:
+            listing = self.publisher_listing(page)
+            for row in listing["items"]:
+                sources.setdefault(row["mid"], row)
+            if page * listing["page_size"] >= listing["total"]:
+                break
+            page += 1
+        progress(step=0, total=max(1, len(sources)), message="已更新活动发布UP主名单", log_append=f"本次检查 {len(sources)} 位")
+        hits = set()
+        failures = 0
+        for index, source in enumerate(sources.values(), 1):
+            _raise_if_cancelled(cancel_event)
+            mid = source["mid"]
+
+            def publish(activities):
+                hits.update(item.dynamic_id for item in activities if not item.closed)
+                _import([Change(seq=0, activity=item) for item in activities], "")
+
+            result = execute(Task(task_id=1, lease=uuid.uuid4().hex, kind="publisher", key=mid),
+                             self.directory / "publisher-cache.json", lambda key: None, lambda key, fields: fields,
+                             publish=publish, watch_coverage={"dynamics": source["checked"]},
+                             record_publishers=self.store.record_publishers)
+            message = "检查未完成，保留名单"
+            if result.outcome == "done" and result.publisher_coverage:
+                with self.store.tx() as db:
+                    removed = self.store.complete_publisher(db, mid, result.publisher_coverage, int(time.time()))
+                message = "已检查" if not removed else "完整检查覆盖 60 天未发布抽奖活动，已移出名单"
+            else:
+                failures += 1
+            progress(step=index, total=len(sources), message=f"{source['name']}（{mid}）：{message}",
+                     log_append=f"{source['name']}（{mid}）：{message}")
+            if result.outcome == "cooldown":
+                failures += len(sources) - index
+                break
+        if not sources:
+            progress(step=1, total=1, message="暂无达到入选条件的发布者")
+        return {"message": f"确认 {len(hits)} 项开放活动，{failures} 位检查未完成",
+                "source_errors": failures, "activities": len(hits)}
 
     def _history(self):
         from web.control_service import get_control_service
@@ -439,9 +532,13 @@ class ClusterService:
                                         watch_uploaded = users
                                 if watch_queue:
                                     watch = watch_queue[0]
-                            feed = self._sync(session, [row for _, row in batch], pool, history=history, watch=watch,
-                                              import_round=turn if independent
-                                              or len(export_queue) <= len(batch) else None)
+                            self._exchange_in_flight = True
+                            try:
+                                feed = self._sync(session, [row for _, row in batch], pool, history=history, watch=watch,
+                                                  import_round=turn if independent
+                                                  or len(export_queue) <= len(batch) else None)
+                            finally:
+                                self._exchange_in_flight = False
                             if feed:
                                 if watch is not None:
                                     watch_queue.pop(0)
@@ -474,6 +571,8 @@ class ClusterService:
 
     def _sync(self, session, batch, pool, *, history=None, import_round=None, watch=None):
         from web.job_runner import runner
+        from web.task_queue import get_task_queue
+        from src.update_state import maintenance
 
         node = session["node"]
         pending = self.store.read(f"report:{node}")
@@ -486,18 +585,26 @@ class ClusterService:
         watch_batch = session["role"] == "host" or bool(self.status_remote.get("watch_batch_supported"))
         watch_link_workers = session["role"] == "host" or bool(self.status_remote.get("watch_link_workers"))
         participation_support = session["role"] == "host" or self.status_remote.get("round_participation_supported")
+        publisher_waiting = get_task_queue().publisher_waiting()
+        if publisher_waiting:
+            runner.pause_round_participation()
         round_participation, participation_result = self._round_participation(session, import_round, runner) if (
             participation_support and import_round
         ) else (None, None)
         independent = session["role"] == "host" or self.status_remote.get("independent_participation")
         local = runner.get_status()
-        local_work = "idle"
+        local_work = "busy" if maintenance.is_set() or publisher_waiting else "idle"
         if local.state == "running":
             local_work = ("participating" if local.action.startswith("participate")
                           else "watch" if local.action == "refresh_watch" else "busy")
         tracking = session["role"] == "host" or self.status_remote.get("watch_tracking")
+        supports_publishers = session["role"] == "host" or self.status_remote.get("publisher_sources_supported")
+        publisher_batch = []
+        if supports_publishers:
+            with self.store.tx(write=False) as db:
+                publisher_batch = publisher_sources.pending(db)
         message = Exchange(node=node, after=self.store.read(cursor_key, 0), activities=batch,
-                           work=not self._job and local_work == "idle" and (two_stage or video_detection),
+                           work=not maintenance.is_set() and not self._job and local_work == "idle" and (two_stage or video_detection),
                            video_detection=video_detection if two_stage else None,
                            unknown_activity_time=True,
                            working=Lease(task_id=active.task_id, lease=active.lease) if active else None,
@@ -509,17 +616,22 @@ class ClusterService:
                            round_participation=round_participation,
                            participation_pending=count_pending_participation() if independent else None,
                            participation_enabled=self._participation_uid(session) is not None if independent else None,
-                           participation_result=participation_result if independent else None)
+                           participation_result=participation_result if independent else None,
+                           publisher_findings=[PublisherFinding(**{k: row[k] for k in ("activity", "mid", "name", "published")})
+                                               for row in publisher_batch] if supports_publishers else None)
         if session["role"] == "host":
             feed = self.store.exchange(message, session["token"])
         else:
             payload = message.model_dump()
             for field in ("video_history", "import_round", "watch_list", "local_work",
                           "watch_batch_capable", "watch_link_workers", "round_participation",
-                          "participation_pending", "participation_enabled", "participation_result"):
+                          "participation_pending", "participation_enabled", "participation_result", "publisher_findings"):
                 if payload[field] is None:
                     del payload[field]
             if pending_report := payload["report"]:
+                if not supports_publishers:
+                    pending_report.pop("publisher_coverage", None)
+                    pending_report.pop("publisher_latest", None)
                 if not self.status_remote.get("discovery_coverage"):
                     for field in ("search_dates", "search_exhausted", "watch_through", "watch_collection"):
                         pending_report.pop(field, None)
@@ -539,6 +651,10 @@ class ClusterService:
                 return None
             if pending:
                 self.store.write(f"report:{node}", None)
+            if publisher_batch:
+                with self.store.tx() as db:
+                    db.executemany("UPDATE publisher_evidence SET forwarded=1 WHERE rowid=?",
+                                   ((row["rowid"],) for row in publisher_batch))
             _import(feed.changes, session["id"])
             # After upgrading, replay the full stream once. The original v1 cursor
             # may have advanced past records it could not represent.
@@ -559,7 +675,7 @@ class ClusterService:
             if feed.task and not self.stop_event.is_set():
                 self._task, self._task_node = feed.task, node
                 options = {"collection_mode": feed.status["watch_collection_mode"]} if feed.status.get("watch_collection_mode") else {}
-                if feed.task.kind == "watch" and feed.status.get("watch_coverage"):
+                if feed.task.kind in {"watch", "publisher"} and feed.status.get("watch_coverage"):
                     options["watch_coverage"] = feed.status["watch_coverage"]
                 self._job = pool.submit(self._execute, session, feed.task, two_stage=bool(feed.status.get("two_stage")),
                                         watch_batch=watch_batch, **options)

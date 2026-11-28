@@ -10,6 +10,7 @@ ALLOWED_JOB_ACTIONS = frozenset(
         "refresh_all",
         "refresh_source",
         "refresh_watch",
+        "refresh_publishers",
         "refresh_status",
         "participate",
         "participate_triple",

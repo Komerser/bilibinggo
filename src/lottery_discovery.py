@@ -424,6 +424,8 @@ def inspect_dynamic(client, dynamic_id: str, *, now: int, item: dict | None = No
     prizes = "、".join(str(notice[k]) for k in ("first_prize_cmt", "second_prize_cmt", "third_prize_cmt") if notice and notice.get(k))
     return {"kind": "dynamic", "url": url, "dynamic_id": dynamic_id,
             "publisher": author.get("name") or "", "publisher_uid": publisher_uid,
+            "published_at": extract_feed_pub_ts(item),
+            "is_forward": bool(item.get("orig") or item.get("type") == "DYNAMIC_TYPE_FORWARD"),
             "prize": prizes or fields.get("prize", ""), "rule_text": text[:1800], "official_notice": notice,
             **assess_candidate(fields, now=now, published=extract_feed_pub_ts(item) or 0, notice=notice, require_deadline=True)}
 
@@ -532,6 +534,8 @@ def discover(
                 "found_via": "publisher_home" if home_prize is not None else ("article_link" if source_article else "video_link"),
                 "source_chain": [{"source": source_video}, *([{"source": source_article}] if source_article else []), {"target": url}],
                 "publisher": author.get("name") or home_owner.get("name") or "",
+                "published_at": published,
+                "is_forward": bool(item.get("orig") or item.get("type") == "DYNAMIC_TYPE_FORWARD"),
                 "publisher_uid": str(author.get("mid") or (notice or {}).get("sender_uid") or home_owner.get("mid") or ""),
                 "prize": prizes or fields.get("prize", ""),
                 "rule_text": text[:1800], "official_notice": notice,

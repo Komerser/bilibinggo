@@ -21,7 +21,7 @@ KEYWORDS = ("抽奖", "福利", "奖品", "转发抽奖", "抽奖活动", "粉�
 BV = Annotated[str, Field(pattern=r"^BV[0-9A-Za-z]{10}$")]
 Token = Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
 NodeId = Annotated[str, Field(pattern=r"^[a-f0-9]{32}$")]
-TaskKind = Literal["search", "video", "watch"]
+TaskKind = Literal["search", "video", "watch", "publisher"]
 LegacyTaskKind = Literal["dynamic", "article", "short", "author"]
 Mid = Annotated[str, Field(pattern=r"^[1-9][0-9]{0,19}$")]
 LocalWork = Literal["idle", "watch", "participating", "busy"]
@@ -96,13 +96,25 @@ class Task(Lease):
             if self.keyword not in KEYWORDS:
                 raise ValueError("未知检索词")
         else:
-            Reference(kind="author" if self.kind == "watch" else self.kind, key=self.key)
+            Reference(kind="author" if self.kind in {"watch", "publisher"} else self.kind, key=self.key)
         return self
 
 
 class CollectionCoverage(Payload):
     container_id: str = Field(min_length=1, max_length=80)
     published_at: int = Field(gt=0, lt=2**63)
+
+
+class PublisherFinding(Payload):
+    activity: Annotated[str, Field(pattern=r"^[0-9]{18,19}$")]
+    mid: Mid
+    name: str = Field(min_length=1, max_length=64)
+    published: int = Field(gt=0, lt=2**63)
+
+
+class PublisherCoverage(Payload):
+    lower: int = Field(gt=0, lt=2**63)
+    upper: int = Field(gt=0, lt=2**63)
 
 
 class Report(Lease):
@@ -114,6 +126,8 @@ class Report(Lease):
     search_exhausted: bool | None = None
     watch_through: int | None = Field(default=None, gt=0, lt=2**63)
     watch_collection: CollectionCoverage | None = None
+    publisher_coverage: PublisherCoverage | None = None
+    publisher_latest: PublisherFinding | None = None
     cooldown: int = Field(default=900, ge=900, le=86400)
     model_calls: int = Field(default=0, ge=0, le=128)
     reason: Literal["platform", "model", "network", "analysis_busy", "worker",
@@ -217,6 +231,7 @@ class Exchange(Payload):
     participation_pending: int | None = Field(default=None, ge=0)
     participation_enabled: bool | None = None
     participation_result: ParticipationResult | None = None
+    publisher_findings: list[PublisherFinding] | None = Field(default=None, max_length=100)
 
 
 class Analysis(Lease):

@@ -1,0 +1,34 @@
+[Unit]
+Description=Binggo persistent server
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=15
+
+[Service]
+Type=simple
+User=binggo
+Group=binggo
+WorkingDirectory=/opt/binggo/app
+Environment=BINGGO_HOME=/var/lib/binggo
+Environment=BINGGO_PORT=8182
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=TZ=Asia/Shanghai
+EnvironmentFile=-/etc/binggo/server.env
+ExecStart=/opt/binggo/venv/bin/python /opt/binggo/app/packaging/linux/server.py
+Restart=always
+RestartSec=15
+TimeoutStopSec=120
+KillSignal=SIGTERM
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/binggo
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1015,6 +1015,7 @@ export function updateProgressUI(job) {
       refresh_all: "同步任务",
       refresh_source: "数据源更新",
       refresh_watch: "监控扫描",
+      refresh_publishers: "活动发布UP主 · 自动更新并搜索",
       login: "登录任务",
     };
     progressChip.textContent = chipMap[job.action] || "任务进行中";
@@ -1225,6 +1226,9 @@ export async function finishJobOnce(job) {
   state.lastFinishedJobKey = key;
   state.currentJob = job;
   updateJobUI(job);
+  if (job.action === "refresh_publishers") {
+    window.dispatchEvent(new Event("binggo:publishers-refresh"));
+  }
 
   if (job.action === "login" && (job.state === "cancelled" || job.state === "idle")) {
     stopJobPolling();

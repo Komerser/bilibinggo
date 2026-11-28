@@ -6,7 +6,7 @@ import re
 
 from src.app_paths import __version__
 
-_SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)")
+_VERSION_RE = re.compile(r"^([0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?)(?:[-+][\w.+-]+)?$")
 
 
 def get_version() -> str:
@@ -21,12 +21,12 @@ def strip_v_prefix(text: str) -> str:
     return raw
 
 
-def parse_version(text: str) -> tuple[int, int, int] | None:
+def parse_version(text: str) -> tuple[int, ...] | None:
     raw = strip_v_prefix(text)
-    match = _SEMVER_RE.match(raw)
+    match = _VERSION_RE.fullmatch(raw)
     if not match:
         return None
-    return int(match.group(1)), int(match.group(2)), int(match.group(3))
+    return tuple(map(int, match.group(1).split(".")))
 
 
 def compare_versions(current: str, latest: str) -> int | None:
@@ -39,6 +39,8 @@ def compare_versions(current: str, latest: str) -> int | None:
         if cur_n and cur_n == lat_n:
             return 0
         return None
+    left = left + (0,) * (4 - len(left))
+    right = right + (0,) * (4 - len(right))
     if left < right:
         return -1
     if left > right:

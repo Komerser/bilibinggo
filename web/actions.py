@@ -348,6 +348,11 @@ def run_action(
     progress = on_progress or _noop_progress
     log_lines: list[str] = []
     _raise_if_cancelled(cancel_event)
+    if action == "refresh_publishers":
+        from web.app import app
+
+        result = app.state.cluster.refresh_publishers(progress, cancel_event)
+        return {"ok": True, "message": result.pop("message"), "result": result}
 
     if action.startswith("control_"):
         from web.control_actions import run_control_action
@@ -736,6 +741,10 @@ def run_action(
         sequential = action == "participate_sequential"
         targets = (pick_triple_participate_targets(**filters, limit=None) if sequential
                    else pick_triple_participate_targets(**filters))
+        round_pause = params.get("_round_pause_event")
+        previously_handled = set(params.get("_round_handled", ())) if account else set()
+        if previously_handled:
+            targets = [target for target in targets if str(target.get("dynamic_id") or "") not in previously_handled]
         label = "自动顺序参与" if sequential else "三连参与"
         from_auto = bool(params.get("from_auto"))
         if not targets:
@@ -901,6 +910,12 @@ def run_action(
         _emit_triple_progress()
         if serial:
             for index, target in enumerate(targets):
+                if round_pause is not None and round_pause.is_set():
+                    message = "轮间参与已暂停，等待本机发布UP主任务执行"
+                    progress(step=_overall_progress_step(), total=total_steps, message=message, log_append=message)
+                    return {"ok": True, "message": message,
+                            "result": {"round_paused": True, "handled": target_ids[:index],
+                                       "joined": len(results), "skipped": len(skipped), "remaining": len(targets) - index}}
                 dynamic_id = str(target.get("dynamic_id") or "")
                 try:
                     results.append(_participate_triple_target(target))

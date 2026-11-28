@@ -22,6 +22,12 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Verify fork release tag
+        if: github.event_name == 'release'
+        shell: pwsh
+        run: |
+          python -c "import os; from src.app_paths import __version__; from src.release_channel import release_tag; expected = release_tag(__version__); assert os.environ['GITHUB_REF_NAME'] == expected, f'Expected release tag: {expected}'"
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -43,6 +49,7 @@ jobs:
           name: binggo-windows-${{ github.sha }}
           path: |
             dist/Binggo-Portable-win64.zip
+            dist/Binggo-Portable-win64.zip.sha256
             dist/Binggo-Setup-win64.exe
 
       - name: Upload release assets
@@ -51,6 +58,7 @@ jobs:
         with:
           files: |
             dist/Binggo-Portable-win64.zip
+            dist/Binggo-Portable-win64.zip.sha256
             dist/Binggo-Setup-win64.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

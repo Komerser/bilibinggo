@@ -2,8 +2,8 @@
 ; 正式构建必须通过 ISCC /DAppVersion=x.y.z 注入版本（SSOT: src/app_paths.__version__）
 
 #define AppName "Binggo"
-#define AppPublisher "Komerser / bilibinggo contributors"
-#define AppURL "https://github.com/Komerser/bilibinggo"
+#define AppPublisher "Aggressiveless / bilibinggo contributors"
+#define AppURL "https://github.com/Aggressiveless/bilibinggo"
 #define AppExeName "Binggo-RepostFix.exe"
 #ifndef AppVersion
   #define AppVersion "0.0.0-dev"

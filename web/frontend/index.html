@@ -388,7 +388,7 @@
                     </li>
                   </ul>
                   <div class="project-showcase-actions">
-                    <a class="btn btn-primary btn-pill project-btn" href="https://github.com/Komerser/bilibinggo" target="_blank" rel="noopener">访问 Fork 仓库</a>
+                    <a class="btn btn-primary btn-pill project-btn" href="https://github.com/Aggressiveless/bilibinggo" target="_blank" rel="noopener">访问 Fork 仓库</a>
                     <a class="btn btn-secondary btn-pill project-btn" href="https://github.com/Komerser" target="_blank" rel="noopener">维护者 Komerser</a>
                     <a class="btn btn-ghost btn-pill project-btn" href="https://github.com/luovicter-collab/bilibinggo" target="_blank" rel="noopener">上游项目</a>
                     <button type="button" class="btn btn-ghost btn-pill" id="export-diagnostics">导出诊断包</button>
@@ -398,12 +398,12 @@
                   <div class="project-meta">
                     <div class="project-meta-row">
                       <span class="project-info-label">Repository</span>
-                      <span class="project-info-value">Komerser / bilibinggo</span>
+                      <span class="project-info-value">Aggressiveless / bilibinggo</span>
                     </div>
                     <div class="project-meta-pairs">
                       <div class="project-meta-item">
                         <span class="project-info-label">Fork 维护者</span>
-                        <a class="project-info-value" href="https://github.com/Komerser" target="_blank" rel="noopener">Komerser</a>
+                        <a class="project-info-value" href="https://github.com/Aggressiveless" target="_blank" rel="noopener">Aggressiveless</a>
                       </div>
                       <div class="project-meta-item">
                         <span class="project-info-label">原作者</span>
@@ -433,9 +433,32 @@
                   </div>
                   <div class="project-showcase-side-actions">
                     <button type="button" class="btn btn-secondary btn-pill btn-compact" id="check-updates">检查更新</button>
-                    <a class="btn btn-ghost btn-pill btn-compact" id="open-releases" href="https://github.com/Komerser/bilibinggo/releases" target="_blank" rel="noopener">Releases</a>
+                    <button type="button" class="btn btn-primary btn-pill btn-compact" id="apply-local-update">更新版本</button>
+                    <a class="btn btn-ghost btn-pill btn-compact" id="open-releases" href="https://github.com/Aggressiveless/bilibinggo/releases" target="_blank" rel="noopener">Releases</a>
                   </div>
                   <p class="caption" id="runtime-health-hint" hidden></p>
+                  <p class="caption" id="local-update-support"></p>
+                  <div id="server-update-sources" class="caption" aria-live="polite" hidden>
+                    <div><a href="https://github.com/Aggressiveless/bilibinggo/releases" target="_blank" rel="noopener">安装源</a> · <span id="server-update-fork"></span></div>
+                    <div><a href="https://github.com/Komerser/bilibinggo/releases" target="_blank" rel="noopener">上游功能源</a> · <span id="server-update-upstream"></span></div>
+                    <div id="server-update-alignment"></div>
+                  </div>
+                  <div class="local-update-demo" id="local-update-demo" hidden>
+                    <span class="caption">演示模式 · 不修改程序和数据</span>
+                    <button type="button" class="btn btn-ghost btn-compact" id="preview-update">演示更新成功</button>
+                    <button type="button" class="btn btn-ghost btn-compact" id="preview-update-failure">演示失败恢复</button>
+                  </div>
+                  <div class="local-update-progress" id="local-update-progress" hidden aria-live="polite">
+                    <strong id="local-update-title">更新进度</strong>
+                    <p id="local-update-message"></p>
+                    <ol id="local-update-steps"></ol>
+                    <p class="caption" id="local-update-data"></p>
+                    <div class="local-update-actions">
+                      <button type="button" class="btn btn-secondary btn-compact" id="cancel-local-update" hidden>取消等待</button>
+                      <button type="button" class="btn btn-primary btn-compact" id="reload-after-update" hidden>刷新页面</button>
+                      <button type="button" class="btn btn-ghost btn-compact" id="open-update-log">查看本机日志</button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </article>
@@ -681,15 +704,36 @@
             </article>
 
             <div class="panel sources-collections-panel">
+              <div class="action-row" role="group" aria-label="合集数据源">
+                <button type="button" class="filter-pill active" data-collection-view="organizers" aria-controls="collection-organizers" aria-pressed="true">活动整理UP主</button>
+                <button type="button" class="filter-pill" data-collection-view="publishers" aria-controls="collection-publishers" aria-pressed="false">活动发布UP主</button>
+              </div>
+              <div id="collection-organizers">
               <div class="panel-head panel-head-row">
                 <div>
                   <p class="eyebrow">合集数据源</p>
-                  <h2 class="section-title">UP 合集</h2>
+                  <h2 class="section-title">活动整理UP主</h2>
                   <p class="section-desc">检查新专栏 → 分类 → 拉取详情 → 入库，仅处理新增链接。</p>
                 </div>
                 <button type="button" class="btn btn-secondary btn-pill" data-action="refresh_all">一键更新</button>
               </div>
               <div class="source-list" id="source-grid"></div>
+              </div>
+              <div id="collection-publishers" hidden>
+                <div class="panel-head panel-head-row">
+                  <div>
+                    <h2 class="section-title">活动发布UP主</h2>
+                    <p class="section-desc">近期多次发布已核验抽奖活动的账号。移除前会核实最近 60 天的发布记录。</p>
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-pill" data-action="refresh_publishers">自动更新并搜索</button>
+                </div>
+                <p class="caption" id="publisher-source-status" role="status"></p>
+                <ul id="publisher-source-list"></ul>
+                <div class="action-row">
+                  <button type="button" class="btn btn-secondary btn-compact btn-pill" id="publisher-source-prev" disabled>上一页</button>
+                  <button type="button" class="btn btn-secondary btn-compact btn-pill" id="publisher-source-next" disabled>下一页</button>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -946,6 +990,11 @@
         </template>
 
         <section class="view-section" id="section-logs" data-title="任务日志" data-subtitle="查看执行顺序、任务进度和结果。">
+          <article class="panel local-update-history" id="local-update-history">
+            <div class="task-panel-heading"><h2>本机更新日志</h2><span class="caption">仅保存在本机，不同步到集群</span></div>
+            <p class="caption" id="local-update-log-empty">暂无更新记录</p>
+            <div id="local-update-log-list"></div>
+          </article>
           <div data-cluster-log="local"></div>
           <div class="task-layout">
             <div class="task-left">

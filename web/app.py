@@ -127,6 +127,7 @@ _JOB_REQUIRES_LOGIN = frozenset(
         "refresh_source",
         "refresh_status",
         "refresh_watch",
+        "refresh_publishers",
     }
 )
 _JOB_REQUIRES_LLM = frozenset(
@@ -137,6 +138,7 @@ _JOB_REQUIRES_LLM = frozenset(
         "refresh_all",
         "refresh_source",
         "refresh_watch",
+        "refresh_publishers",
     }
 )
 
@@ -163,6 +165,8 @@ install_discovery(app)
 install_task_queue(app)
 from web.cluster_routes import install_cluster
 install_cluster(app)
+from web.update_routes import install_updates
+install_updates(app)
 
 
 @app.get("/api/watch-users", tags=["stable"])
@@ -314,7 +318,7 @@ def api_start_job(request: JobRequest, enqueue: bool = False) -> dict[str, Any]:
         dynamic_id = str(params.get("dynamic_id") or "").strip()
         if not is_valid_dynamic_id(dynamic_id):
             raise AppError(ErrorCode.VALIDATION_ERROR, "活动 ID 无效")
-    if enqueue and request.action in QUEUEABLE_ACTIONS:
+    if (enqueue or request.action == "refresh_publishers") and request.action in QUEUEABLE_ACTIONS:
         entry = get_task_queue().submit(request.action, params)
         current = runner.resolve_job_status(entry["job_id"]) if entry["job_id"] else runner.get_status()
         return {"ok": True, "job": current.to_dict(), "queue_entry": entry}
@@ -352,8 +356,24 @@ def api_runtime() -> dict[str, Any]:
 )
 def api_updates_check() -> dict[str, Any]:
     """手动检查 GitHub Releases；网络失败也返回 200 + ok=false。"""
+    from src.server_update import configured
     from src.update_check import check_for_updates
 
+    if configured():
+        from src.version_info import get_version
+        from web.update_routes import release_plan
+
+        plan = release_plan(get_version(), server=True)
+        fork = plan["sources"]["fork"]
+        if plan["available"]:
+            message = f"发现合并版 {plan['latest']}"
+        elif plan["upstream_pending"]:
+            message = "上游有更新，待合并并发布本站部署包"
+        else:
+            message = fork.get("detail") or plan["sources"]["upstream"].get("detail") or "已安装当前合并版"
+        return {"ok": bool(fork.get("tag")), "current": plan["current"], "latest": plan["latest"],
+                "update_available": plan["available"], "release_url": plan["release_url"],
+                "download_url": plan.get("archive"), "message": message, "platform": "linux"}
     return check_for_updates().to_dict()
 
 

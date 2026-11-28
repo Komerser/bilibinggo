@@ -155,6 +155,7 @@ class JobRunner:
         self._lock = threading.Lock()
         self._status = JobStatus()
         self._cancel_event: threading.Event | None = None
+        self._round_pause: threading.Event | None = None
         self._last_db_flush_at = 0.0
         self._recovered = False
         self._run_started_mono: float | None = None
@@ -192,6 +193,12 @@ class JobRunner:
         with self._lock:
             return self._status.state == "running"
 
+    def pause_admission_for_update(self) -> None:
+        from src.update_state import maintenance
+
+        with self._lock:
+            maintenance.set()
+
     def start(
         self,
         action: str,
@@ -214,10 +221,13 @@ class JobRunner:
         source_s = str(source or "ui")
 
         with self._lock:
-            if self._status.state == "running":
+            from src.update_state import maintenance
+            if self._status.state == "running" or maintenance.is_set():
                 return None
             previous = _copy_status(self._status)
             self._cancel_event = threading.Event()
+            self._round_pause = (threading.Event() if action == "participate_sequential"
+                                 and source_s == "auto" and params.get("_cluster_account") else None)
             self._last_db_flush_at = 0.0
             # 先占槽再写库，避免持锁做 IO；id 稍后回填
             self._status = JobStatus(
@@ -270,6 +280,7 @@ class JobRunner:
                 return None
             self._status.id = job_id
             cancel_event = self._cancel_event
+            round_pause = self._round_pause
 
         _publish_job_event(
             "job.created",
@@ -288,7 +299,7 @@ class JobRunner:
         logger.info("任务启动 job_id=%s action=%s source=%s", job_id, action, source_s)
         thread = threading.Thread(
             target=self._run_worker,
-            args=(job_id, action, params, cancel_event),
+            args=(job_id, action, params, cancel_event, round_pause),
             daemon=True,
             name=f"job-{job_id}-{action}",
         )
@@ -303,6 +314,11 @@ class JobRunner:
                 self._cancel_event.set()
             logger.info("任务取消请求 job_id=%s action=%s", self._status.id, self._status.action)
             return True
+
+    def pause_round_participation(self):
+        with self._lock:
+            if self._status.state == "running" and self._round_pause is not None:
+                self._round_pause.set()
 
     def wait_until_terminal(
         self,
@@ -562,6 +578,7 @@ class JobRunner:
         action: str,
         params: dict[str, Any],
         cancel_event: threading.Event | None,
+        round_pause: threading.Event | None = None,
     ) -> None:
         with self._lock:
             job_source = str(self._status.source or "ui")
@@ -578,7 +595,7 @@ class JobRunner:
             try:
                 payload = run_action(
                     action,
-                    params,
+                    {**params, "_round_pause_event": round_pause} if round_pause else params,
                     on_progress=on_progress,
                     cancel_event=cancel_event,
                 )

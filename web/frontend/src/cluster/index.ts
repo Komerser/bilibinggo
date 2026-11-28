@@ -76,7 +76,7 @@ const number = new Intl.NumberFormat("zh-CN");
 const percent = new Intl.NumberFormat("zh-CN", { style: "percent", maximumFractionDigits: 1 });
 const count = (value?: number) => value === undefined ? "—" : number.format(value);
 const time = (stamp: number) => new Date(stamp * 1000).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-const kinds: Record<string, string> = { search: "检索页", video: "视频检测", watch: "追踪检查", dynamic: "动态核验", short: "短链展开", article: "专栏检查", author: "发布者检查" };
+const kinds: Record<string, string> = { search: "检索页", video: "视频检测", watch: "追踪检查", publisher: "活动发布UP主检查", dynamic: "动态核验", short: "短链展开", article: "专栏检查", author: "发布者检查" };
 const phases: Record<string, string> = {
   collecting: "协作检索中", detecting: "分配检测中", running: "协作检索中",
   importing: "轮间导入活动",

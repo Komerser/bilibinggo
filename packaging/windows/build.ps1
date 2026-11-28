@@ -43,6 +43,10 @@ if (-not (Test-Path (Join-Path $DistDir "Binggo-RepostFix.exe"))) {
 }
 
 Write-Host "==> 生成便携版 ZIP"
+python -m PyInstaller --noconfirm --clean --onefile --windowed --paths . --specpath build --name Binggo-Updater scripts/local_update_worker.py
+if ($LASTEXITCODE -ne 0) { throw '更新程序构建失败' }
+Copy-Item -LiteralPath (Join-Path $Root 'dist/Binggo-Updater.exe') -Destination $DistDir
+@{schema=1; version=$AppVersion} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $DistDir 'update-capabilities.json') -Encoding utf8
 $ZipPath = Join-Path $Root "dist\Binggo-Portable-win64.zip"
 if (Test-Path $ZipPath) { Remove-Item $ZipPath -Force }
 
@@ -64,6 +68,8 @@ Binggo 便携版（Windows）
 Set-Content -Path (Join-Path $DistDir "使用说明.txt") -Value $ReadmePortable -Encoding UTF8
 
 Compress-Archive -Path $DistDir -DestinationPath $ZipPath
+$PortableHash = (Get-FileHash -LiteralPath $ZipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+"$PortableHash  Binggo-Portable-win64.zip" | Set-Content -LiteralPath "$ZipPath.sha256" -Encoding ascii
 
 function Invoke-BinggoInnoSetup {
     param(
